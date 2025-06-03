@@ -1,24 +1,18 @@
-import mongoose, { Schema, Document, Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
-export interface IMessage {
+export interface Message extends Document {
   conversation_id: string;
-  sender_user_id?: string;
+  sender_id?: string;
   content: string;
-  timestamp: Date;
   read_status: Map<string, Date | boolean | string>;
 }
 
-export interface IMessageDocument extends IMessage, Document { }
-
-export interface IMessageModel extends Model<IMessageDocument> { }
-
-const MessageModel = new Schema<IMessageDocument, IMessageModel>({
+const messageSchema = new Schema<Message, Model<Message>>({
   _id: { type: String, default: () => uuidv4() },
   conversation_id: { type: String, ref: 'Conversation', required: true },
-  sender_user_id: { type: String, ref: 'User', default: null },
+  sender_id: { type: String, ref: 'User', default: null },
   content: { type: String, required: true, maxlength: 5000 },
-  timestamp: { type: Date, default: Date.now, required: true },
   read_status: { 
     type: Map, 
     of: Schema.Types.Mixed, 
@@ -29,6 +23,6 @@ const MessageModel = new Schema<IMessageDocument, IMessageModel>({
   _id: false
 });
 
-MessageModel.index({ conversation_id: 1, timestamp: -1 }); // Primary query for messages in a conversation
+messageSchema.index({ conversation_id: 1, timestamp: -1 }); 
 
-export default mongoose.model<IMessageDocument, IMessageModel>('Message', MessageModel);
+export default model<Message>('Message', messageSchema);

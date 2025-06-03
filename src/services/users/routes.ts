@@ -1,13 +1,8 @@
 import { Router } from 'express';
 import * as userHandlers from './handlers';
-import * as userValidations from './validations';
-import { validate } from '@/middleware/validate'; // Assuming a general validation middleware
-// import { isAuthenticated } from '@/middleware/auth'; // Assuming an auth middleware
 
 const router = Router();
 
-// --- Public routes ---
-// Get user profile by ID
 router.get(
   '/:userId',
   validate(userValidations.userIdSchema),

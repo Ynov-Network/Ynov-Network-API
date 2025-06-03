@@ -22,6 +22,8 @@ app.use(
   })
 );
 
+const API_PREFIX = "/api"
+
 
 
 app.listen(config.server.port, async () => {

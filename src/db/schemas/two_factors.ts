@@ -1,21 +1,21 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import { Schema, model, type Document, type Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
-export interface ITwoFactor extends Document {
+export interface TwoFactor extends Document {
   _id: string;
   secret: string;
-  backup_codes: string[]; // IMPORTANT: These should be HASHED before storing
+  backup_codes: string[]; 
   user_id: string;
 }
 
-const TwoFactorModel = new Schema<ITwoFactor>({
+const twoFactorSchema = new Schema<TwoFactor, Model<TwoFactor>>({
   _id: { type: String, default: () => uuidv4() },
-  secret: { type: String, required: true }, // TOTP secret
-  backup_codes: [{ type: String, required: true }], // Store HASHED backup codes
+  secret: { type: String, required: true }, 
+  backup_codes: [{ type: String, required: true }],
   user_id: { type: String, ref: 'User', required: true, unique: true },
 }, {
   timestamps: true,
   _id: false,
 });
 
-export default mongoose.model<ITwoFactor>('TwoFactor', TwoFactorModel);
+export default model<TwoFactor>('TwoFactor', twoFactorSchema);

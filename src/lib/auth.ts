@@ -12,23 +12,69 @@ import config from "@/config/config";
 export const auth = betterAuth({
   database: mongodbAdapter(await getNativeClient()),
   appName: "ynetwork",
+  user: {
+    modelName: "users",
+    fields: {
+      name: "username",
+      email: "university_email",
+      emailVerified: "email_verified",
+      image: "profile_picture_url",
+    },
+  },
   account: {
+    modelName: "accounts",
+    fields: {
+      userId: "user_id",
+      accountId: "account_id",
+      providerId: "provider_id",
+      accessToken: "access_token",
+      refreshToken: "refresh_token",
+      accessTokenExpiresAt: "access_token_expires_at",
+      refreshTokenExpiresAt: "refresh_token_expires_at",
+      scope: "scope",
+      idToken: "id_token",
+    },
     accountLinking: {
       enabled: true,
     }
   },
+  session: {
+    modelName: "sessions",
+    fields: {
+      userId: "user_id",
+      token: "token",
+      expiresAt: "expires_at",
+      ipAddress: "ip_address",
+      userAgent: "user_agent",
+    },
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // Update daily
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5, // 5 minutes
+    },
+  },
+  verification: {
+    modelName: "verifications",
+    fields: {
+      identifier: "identifier",
+      value: "value",
+      expiresAt: "expires_at",
+    }
+  },
+
   // Email configuration
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await sendMail({
-        to: user.university_email, // Changed from user.email
+        to: user.email, // Changed from user.email
         subject: "Verify Your YNetwork Account",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Welcome to YNetwork!</h2>
-            <p>Hello ${user.username || 'there'},</p> <!-- Changed from user.name, added fallback -->
+            <p>Hello ${user.name || 'there'},</p> <!-- Changed from user.name, added fallback -->
             <p>Please verify your school email address to complete your registration.</p>
             <p><a href="${url}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
             <p>This verification is required to ensure only school members can access the platform.</p>
@@ -40,16 +86,17 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: {
+    minPasswordLength: 8,
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await sendMail({
-        to: user.university_email, // Changed from user.email
+        to: user.email, // Changed from user.email
         subject: "Reset Your YNetwork Password",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Password Reset Request</h2>
-            <p>Hello ${user.username || 'there'},</p> <!-- Changed from user.name, added fallback -->
+            <p>Hello ${user.name || 'there'},</p> <!-- Changed from user.name, added fallback -->
             <p>You requested to reset your password for your YNetwork account.</p>
             <p><a href="${url}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
             <p>This link will expire in 1 hour for security reasons.</p>
@@ -78,18 +125,9 @@ export const auth = betterAuth({
     },
   },
 
-  // Session configuration
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // Update daily
-    cookieCache: {
-      enabled: true,
-      maxAge: 60 * 5, // 5 minutes
-    },
-  },
-
   // Advanced security options
   advanced: {
+
     ipAddress: {
       ipAddressHeaders: ["x-client-ip", "x-forwarded-for"],
       disableIpTracking: false
@@ -177,5 +215,5 @@ export const auth = betterAuth({
     window: 60 * 1000, // 1 minute
     max: 100, // 100 requests per minute
     storage: "database", // Use database for rate limiting
-  },
-})
+  },  
+});
