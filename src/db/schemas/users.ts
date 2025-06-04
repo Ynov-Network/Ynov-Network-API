@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface User extends Document {
   university_email: string;
-  first_name?: string;
-  last_name?: string;
+  first_name: string;
+  last_name: string;
   username: string;
   profile_picture_url?: string;
   bio?: string;

@@ -6,6 +6,9 @@ import cors from "cors";
 import connectMongoDB from "./db";
 import cloudinary from "./lib/cloudinary";
 
+// services
+import authRouter from "@/services/auth/routes"
+
 const app = express();
 
 app.use(helmet());
@@ -24,7 +27,7 @@ app.use(
 
 const API_PREFIX = "/api"
 
-
+app.use(`${API_PREFIX}/auth`, authRouter);
 
 app.listen(config.server.port, async () => {
   await connectMongoDB()

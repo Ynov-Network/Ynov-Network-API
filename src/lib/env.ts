@@ -31,16 +31,15 @@ expand(config());
 try {
     EnvSchema.parse(process.env);
 } catch (error) {
-    if (error instanceof ZodError) {
-        let message = "Missing required values in .env:\n";
-        for (const issue of error.issues) {
-            message += `${String(issue.path[0])}\n`;
-        }
+    if (error instanceof z.ZodError) {
+        let message = "Missing required values in env: \n";
+        message += Object.keys(z.flattenError(error).fieldErrors).join("\n");
         const e = new Error(message);
         e.stack = "";
         throw e;
+    } else {
+        console.error(error);
     }
-    console.error(error);
 }
 
 export default EnvSchema.parse(process.env);

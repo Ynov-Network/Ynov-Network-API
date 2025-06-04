@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { getNativeClient } from "@/db";
+import { v4 as uuidv4 } from 'uuid';
 
 // BetterAuth configuration
 import { twoFactor } from "better-auth/plugins"
@@ -12,6 +13,7 @@ import config from "@/config/config";
 export const auth = betterAuth({
   database: mongodbAdapter(await getNativeClient()),
   appName: "ynetwork",
+  trustedOrigins: [config.server.corsOrigins || "http://localhost:5173"],
   user: {
     modelName: "users",
     fields: {
@@ -20,6 +22,20 @@ export const auth = betterAuth({
       emailVerified: "email_verified",
       image: "profile_picture_url",
     },
+    additionalFields: {
+      firstName: { fieldName: "first_name", type: "string", input: true, required: true, returned: true },
+      lastName: { fieldName: "last_name", type: "string", input: true, required: true, returned: true },
+      country: { fieldName: "country", type: "string", input: false },
+      city: { fieldName: "city", type: "string", input: false },
+      bio: { fieldName: "bio", type: "string", input: false },
+      dateJoined: { fieldName: "date_joined", type: "date", defaultValue: new Date() },
+      lastLogin: { fieldName: "last_login", type: "date", input: false },
+      privacySettings: { fieldName: "privacy_settings", type: "string[]", input: false },
+      role: { fieldName: "role", type: "string", defaultValue: "strudent" },
+      followerCount: { fieldName: "follower_count", type: "number", input: false, defaultValue: 0 },
+      followingCount: { fieldName: "following_count", type: "number", input: false, defaultValue: 0 },
+      postCount: { fieldName: "post_count", type: "number", input: false, defaultValue: 0 },
+    }
   },
   account: {
     modelName: "accounts",
@@ -65,6 +81,7 @@ export const auth = betterAuth({
 
   // Email configuration
   emailVerification: {
+    expiresIn: 60 * 60,
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
@@ -87,6 +104,7 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     minPasswordLength: 8,
+    maxPasswordLength: 64,
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
@@ -127,7 +145,6 @@ export const auth = betterAuth({
 
   // Advanced security options
   advanced: {
-
     ipAddress: {
       ipAddressHeaders: ["x-client-ip", "x-forwarded-for"],
       disableIpTracking: false
@@ -139,7 +156,7 @@ export const auth = betterAuth({
     },
     cookies: {
       session_token: {
-        name: "custom_session_token",
+        name: "ynetwork_session",
         attributes: {
           httpOnly: true,
           secure: true
@@ -153,7 +170,7 @@ export const auth = betterAuth({
     cookiePrefix: "ynetwork",
     database: {
       generateId: () => {
-        return crypto.randomUUID();
+        return uuidv4();
       },
     }
   },
