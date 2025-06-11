@@ -22,6 +22,7 @@ export interface User extends Document {
   banned: boolean;
   ban_reason?: string;
   ban_expires?: Date;
+  account_privacy: 'public' | 'private' | 'followers_only';
 }
 
 const userSchema = new Schema<User, Model<User>>({
@@ -46,12 +47,10 @@ const userSchema = new Schema<User, Model<User>>({
   banned: { type: Boolean, default: false },
   ban_reason: { type: String },
   ban_expires: { type: Date },
+  account_privacy: { type: String, enum: ['public', 'private', 'followers_only'], default: 'public' },
 }, {
   timestamps: true,
   _id: false
 });
-
-userSchema.index({ university_email: 1 });
-userSchema.index({ username: 1 });
 
 export default model<User>('User', userSchema);

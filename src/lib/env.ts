@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { expand } from "dotenv-expand";
 
-import { ZodError, z } from "zod/v4";
+import { z } from "zod/v4";
 
 const EnvSchema = z.object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -10,7 +10,7 @@ const EnvSchema = z.object({
     CORS_ORIGINS: z.string().default("http://localhost:5173"),
     MONGO_URI: z.string().default("mongodb://localhost:27017/ynetwork"), // Renamed from DB_URL and updated default
     BETTER_AUTH_SECRET: z.string(),
-    BETTER_AUTH_URL: z.string().default("http://localhost:3000"),
+    BETTER_AUTH_URL: z.string(),
     MAILING_EMAIL: z.email(),
     MAILING_PASSWORD: z.string(),
     JWT_SECRET: z.string(), // Added

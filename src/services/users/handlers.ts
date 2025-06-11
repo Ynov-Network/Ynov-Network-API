@@ -1,197 +1,172 @@
 import type { Response } from 'express';
-import bcrypt from 'bcryptjs';
-import User from '../../db/schemas/users'; // Adjusted path
-import type {
-  GetUserProfileRequest,
-  UpdateUserProfileRequest,
-  UserActionRequest,
-  AuthenticatedRequest,
-  SearchUsersRequest,
-} from './request-types';
-import {
-  objectIdStringSchema,
-  searchUsersQuerySchema,
-} from './validations';
+import type { GetUserProfileRequest, UpdateUserRequest, UpdateProfilePictureRequest, UpdatePrivacySettingsRequest, DeleteUserRequest } from './request-types';
+import User from '@/db/schemas/users';
+import cloudinary from '@/lib/cloudinary';
+import { APIError } from 'better-auth/api';
+import { auth } from '@/lib/auth';
+import { setCookieToHeader } from 'better-auth/cookies';
 
-const SALT_ROUNDS = 10;
+// Helper to select public fields
+const publicUserFields = 'first_name last_name username profile_picture_url bio country city follower_count following_count post_count date_joined';
 
-export async function getCurrentUserProfileHandler(req: AuthenticatedRequest, res: Response) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
+export const getUserProfile = async (req: GetUserProfileRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user._id).select('-password_hash');
+    const userIdToFetch = req.params.userId || req.auth?.user?.id;
+    if (!userIdToFetch) {
+      res.status(400).json({ error: 'User ID not provided and not logged in.' });
+      return;
+    }
+
+    const user = await User.findById(userIdToFetch).select(publicUserFields);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ error: 'User not found.' });
+      return;
     }
-    return res.status(200).json(user);
+    // Add logic here to check privacy settings if fetching another user's profile
+    res.status(200).json(user);
   } catch (error) {
-    console.error('Error in getCurrentUserProfileHandler:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in getUserProfile:', error);
+    if (error instanceof APIError) {
+      res.status(error.statusCode).json(error);
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error.' });
   }
-}
+};
 
-export async function getUserProfileByIdHandler(req: GetUserProfileRequest, res: Response) {
+export const getMyProfile = async (req: GetUserProfileRequest, res: Response) => {
+  if (!req.auth?.user) {
+    res.status(401).json({ error: 'Unauthorized.' });
+    return;
+  }
+  req.params.userId = req.auth.user.id; // Set userId to the authenticated user's ID
+  return getUserProfile(req, res); // Reuse the main getUserProfile logic
+};
+
+export const updateUserProfile = async (req: UpdateUserRequest, res: Response) => {
   try {
-    const validationResult = objectIdStringSchema.safeParse(req.params.userId);
-    if (!validationResult.success) {
-      return res.status(400).json({ message: 'Invalid user ID format', errors: validationResult.error.format() });
-    }
-    const userId = validationResult.data;
+    const { first_name, last_name, username, bio, country, city } = req.body;
 
-    const user = await User.findById(userId).select('-password_hash -university_email'); // Example: hide email for public profiles
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    return res.status(200).json(user);
-  } catch (error) {
-    console.error('Error in getUserProfileByIdHandler:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-}
-
-export async function updateUserProfileHandler(req: UpdateUserProfileRequest, res: Response) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-  try {
-    const validationResult = updateUserProfileSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({ message: 'Validation failed', errors: validationResult.error.format() });
-    }
-    const updates = validationResult.data;
-
-    // Prevent updating certain fields directly if needed, e.g., email, role
-    // delete updates.university_email;
-    // delete updates.role;
-
-    const updatedUser = await User.findByIdAndUpdate(req.user._id, { $set: updates }, { new: true }).select('-password_hash');
-    if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    return res.status(200).json({ message: 'Profile updated successfully', user: updatedUser });
-  } catch (error) {
-    console.error('Error in updateUserProfileHandler:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-}
-
-export async function searchUsersHandler(req: SearchUsersRequest, res: Response) {
-  try {
-    const validationResult = searchUsersQuerySchema.safeParse(req.query);
-    if (!validationResult.success) {
-      return res.status(400).json({ message: 'Invalid query parameters', errors: validationResult.error.format() });
-    }
-    const { username, page, limit } = validationResult.data;
-
-    const query: any = {};
-    if (username) {
-      query.username = { $regex: username, $options: 'i' }; // Case-insensitive search
-    }
-
-    const users = await User.find(query)
-      .select('-password_hash -university_email') // Exclude sensitive info
-      .limit(limit)
-      .skip((page - 1) * limit)
-      .sort({ username: 1 }); // Sort by username
-
-    const totalUsers = await User.countDocuments(query);
-
-    return res.status(200).json({
-      users,
-      currentPage: page,
-      totalPages: Math.ceil(totalUsers / limit),
-      totalUsers,
+    const response = await auth.api.updateUser({
+      body: {
+        firstName: first_name,
+        lastName: last_name, 
+        name: username,
+        bio,
+        country,
+        city
+      },
+      asResponse: true,
     });
-  } catch (error) {
-    console.error('Error in searchUsersHandler:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-}
 
-// Simplified follow/unfollow: only updates counts.
-// A full implementation would involve a separate 'Follows' collection or arrays in user docs.
-export async function followUserHandler(req: UserActionRequest, res: Response) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    setCookieToHeader(response.headers);
+    res.status(response.status).json(response.body);
+
+  } catch (error) {
+    console.error('Error in updateUserProfile:', error);
+    if (error instanceof APIError) {
+      res.status(error.statusCode).json(error.body);
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+export const updateProfilePicture = async (req: UpdateProfilePictureRequest, res: Response) => {
+  if (!req.auth?.user) {
+    res.status(401).json({ error: 'Unauthorized.' });
+    return;
   }
   try {
-    const validationResult = objectIdStringSchema.safeParse(req.params.targetUserId);
-    if (!validationResult.success) {
-      return res.status(400).json({ message: 'Invalid target user ID format' });
-    }
-    const targetUserId = validationResult.data;
-    const currentUserId = req.user._id;
+    const userId = req.auth.user.id;
+    const imageBase64 = req.body.image;
 
-    if (currentUserId === targetUserId) {
-      return res.status(400).json({ message: 'You cannot follow yourself' });
+    if (!imageBase64) {
+      res.status(400).json({ error: "Image data not provided." });
+      return;
     }
 
-    // In a real system, you'd check if already following, perhaps in a separate Follows collection.
-    // For this example, we'll just increment counts. This might lead to incorrect counts if called multiple times.
-    // A robust solution needs a Follows collection to track the actual relationship.
-
-    const currentUser = await User.findByIdAndUpdate(currentUserId, { $inc: { following_count: 1 } }, { new: true });
-    const targetUser = await User.findByIdAndUpdate(targetUserId, { $inc: { follower_count: 1 } }, { new: true });
-
-    if (!currentUser || !targetUser) {
-      // Rollback if one update failed (simplified, transactions would be better)
-      if (currentUser) await User.findByIdAndUpdate(currentUserId, { $inc: { following_count: -1 } });
-      if (targetUser) await User.findByIdAndUpdate(targetUserId, { $inc: { follower_count: -1 } });
-      return res.status(404).json({ message: 'User not found' });
+    const user = await User.findById(userId).select('profile_picture_url');
+    if (user?.profile_picture_url) {
+      const publicIdWithFolder = user.profile_picture_url.split('/').slice(-2).join('/').split('.')[0];
+      if (publicIdWithFolder) {
+        await cloudinary.uploader.destroy(publicIdWithFolder);
+      }
     }
 
-    return res.status(200).json({ message: `Successfully followed ${targetUser.username}` });
+    const uploadResponse = await cloudinary.uploader.upload(imageBase64, {
+      folder: "profile_pictures",
+      public_id: `${userId}_${Date.now()}`,
+    });
+
+    const response = await auth.api.updateUser({
+      body: { image: uploadResponse.secure_url },
+      asResponse: true,
+    });
+
+    setCookieToHeader(response.headers);
+    if (response.body && typeof response.body === 'object' && 'user' in response.body) {
+      res.status(response.status).json({
+        message: 'Profile picture updated successfully.',
+        user: response.body.user
+      });
+      return;
+    }
+
+    res.status(response.status).json(response.body);
+
   } catch (error) {
-    console.error('Error in followUserHandler:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in updateProfilePicture:', error);
+    if (error instanceof APIError) {
+      res.status(error.statusCode).json(error.body);
+      return;
+    }
   }
-}
+};
 
-export async function unfollowUserHandler(req: UserActionRequest, res: Response) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
+export const updatePrivacySettings = async (req: UpdatePrivacySettingsRequest, res: Response) => {
   try {
-    const validationResult = objectIdStringSchema.safeParse(req.params.targetUserId);
-    if (!validationResult.success) {
-      return res.status(400).json({ message: 'Invalid target user ID format' });
-    }
-    const targetUserId = validationResult.data;
-    const currentUserId = req.user._id;
+    const { account_privacy } = req.body;
 
-    if (currentUserId === targetUserId) {
-      return res.status(400).json({ message: 'You cannot unfollow yourself' });
+    if (!account_privacy) {
+      res.status(400).json({ message: "No privacy settings provided." });
+      return;
     }
 
-    // Similar to follow, a robust solution needs a Follows collection.
-    // Decrement counts, ensuring they don't go below zero.
-    const currentUser = await User.findOneAndUpdate(
-      { _id: currentUserId, following_count: { $gt: 0 } },
-      { $inc: { following_count: -1 } },
-      { new: true }
-    );
-    const targetUser = await User.findOneAndUpdate(
-      { _id: targetUserId, follower_count: { $gt: 0 } },
-      { $inc: { follower_count: -1 } },
-      { new: true }
-    );
+    const response = await auth.api.updateUser({
+      body: { accountPrivacy: account_privacy },
+      asResponse: true,
+    });
 
-    // If counts were already 0, findOneAndUpdate returns null if condition (e.g. following_count: { $gt: 0 }) is not met.
-    // Or, if the user simply wasn't found.
-    // A more robust check would be to see if a follow relationship existed before decrementing.
-
-    if (!currentUser || !targetUser) {
-      // This logic might be too simple if one user exists and the other doesn't, or if counts were already 0.
-      // For simplicity, we assume if either update didn't effectively run (e.g. count was 0 or user not found),
-      // it's an issue or the action wasn't applicable.
-      // A real system would check the existence of a follow record.
-      return res.status(404).json({ message: 'User not found or not currently following/followed' });
-    }
-
-    return res.status(200).json({ message: `Successfully unfollowed ${targetUser.username}` });
+    setCookieToHeader(response.headers);
+    res.status(response.status).json(response.body);
   } catch (error) {
-    console.error('Error in unfollowUserHandler:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in updatePrivacySettings:', error);
+    if (error instanceof APIError) {
+      res.status(error.statusCode).json(error.body);
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+export const deleteUser = async (req: DeleteUserRequest, res: Response) => {
+  try {
+    const response = await auth.api.deleteUser({
+      body: {
+        password: req.body.password,
+      },
+      asResponse: true,
+    });
+
+    setCookieToHeader(response.headers);
+    res.status(response.status).json(response.body);
+  } catch (error) {
+    console.error('Error in deleteUser:', error);
+    if (error instanceof APIError) {
+      res.status(error.statusCode).json(error.body);
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error.' });
   }
 }

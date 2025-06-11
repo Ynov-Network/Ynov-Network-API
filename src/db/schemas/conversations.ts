@@ -19,7 +19,6 @@ const conversationSchema = new Schema<Conversation, Model<Conversation>>({
   _id: false
 });
 
-// Index for querying conversations by last essage (e.g., for sorting recent chats)
 conversationSchema.index({ last_message_timestamp: -1 });
 
 export default model<Conversation>('Conversation', conversationSchema);

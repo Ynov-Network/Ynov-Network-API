@@ -8,7 +8,7 @@ const config = {
     corsOrigins: env.CORS_ORIGINS,
   },
   database: {
-    url: env.MONGO_URI, // Updated from DB_URL to MONGO_URI
+    url: env.MONGO_URI, 
   },
   betterAuth: {
     secret: env.BETTER_AUTH_SECRET,
@@ -18,10 +18,10 @@ const config = {
     email: env.MAILING_EMAIL,
     password: env.MAILING_PASSWORD,
   },
-  jwt: { // Added
+  jwt: { 
     secret: env.JWT_SECRET,
   },
-  cloudinary: { // Added
+  cloudinary: {
     cloudName: env.CLOUDINARY_CLOUD_NAME,
     apiKey: env.CLOUDINARY_API_KEY,
     apiSecret: env.CLOUDINARY_API_SECRET,

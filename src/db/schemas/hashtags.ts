@@ -15,7 +15,6 @@ const hashtagSchema = new Schema<Hashtag, Model<Hashtag>>({
   _id: false
 });
 
-hashtagSchema.index({ tag_name: 1 });
 hashtagSchema.index({ post_count: -1 });
 
 export default model<Hashtag>('Hashtag', hashtagSchema);

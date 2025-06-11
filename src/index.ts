@@ -1,33 +1,31 @@
 import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import config from "./config/config";
-import cookieParser from "cookie-parser";
-import cors from "cors";
 import connectMongoDB from "./db";
-import cloudinary from "./lib/cloudinary";
-
-// services
-import authRouter from "@/services/auth/routes"
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "@/lib/auth";
+import apiServices from "./services";
 
 const app = express();
 
 app.use(helmet());
-app.disable("x-powered-by");
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 app.use(
   cors({
-    origin: config.server.corsOrigins || "http://localhost:5173",
+    origin: config.server.corsOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
+    credentials: true
   })
 );
 
-const API_PREFIX = "/api"
+app.all("/api/better-auth/*splat", toNodeHandler(auth))
 
-app.use(`${API_PREFIX}/auth`, authRouter);
+app.use(express.json())
+app.use(cookieParser());
+
+
+app.use("/api", apiServices);
 
 app.listen(config.server.port, async () => {
   await connectMongoDB()

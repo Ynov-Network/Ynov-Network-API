@@ -11,7 +11,7 @@ const followSchema = new Schema<Follow, Model<Follow>>({
   follower_id: { type: String, ref: 'User', required: true },
   following_id: { type: String, ref: 'User', required: true },
 }, {
-  timestamps: { createdAt: 'created_at', updatedAt: false }, 
+  timestamps: true, 
   _id: false,
   versionKey: false,
 });

@@ -1,0 +1,32 @@
+import { Router } from 'express';
+import * as notificationHandlers from './handlers';
+import { protectRoute } from '@/common/middleware/auth.middleware';
+import { validationMiddleware } from '@/common/middleware/validation.middleware';
+import { getNotificationsQuerySchema, notificationIdParamsSchema } from './validations';
+
+const router = Router();
+
+// Get all notifications for the logged-in user
+router.get(
+  '/',
+  protectRoute,
+  validationMiddleware({ query: getNotificationsQuerySchema }),
+  notificationHandlers.getNotifications
+);
+
+// Mark a specific notification as read
+router.put(
+  '/:notificationId/read',
+  protectRoute,
+  validationMiddleware({ params: notificationIdParamsSchema }),
+  notificationHandlers.markAsRead
+);
+
+// Mark all notifications as read
+router.post(
+  '/read-all',
+  protectRoute,
+  notificationHandlers.markAllAsRead
+);
+
+export default router;

@@ -1,7 +1,6 @@
 import { Schema, model, type Document, type Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
-// Base interface
 export interface Comment extends Document {
   post_id: string;
   author_id: string;

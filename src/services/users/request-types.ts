@@ -1,27 +1,24 @@
-import type { Request } from 'express';
-import type { 
-  updateUserProfileSchema, 
-  searchUsersQuerySchema 
-} from './validations';
-import type { z } from 'zod';
+import type { Request } from "express";
+import type { DeleteUserRequestBody, UpdatePrivacySettingsRequestBody, UpdateProfilePictureRequestBody, UpdateUserRequestBody } from "./validations";
 
-export interface GetUserProfileRequest extends Request { // Request if it's for the logged-in user
+export interface GetUserProfileRequest extends Request {
   params: {
-    userId: string;
+    userId?: string;
   };
 }
 
-export interface UpdateUserProfileRequest extends Request {
-  body: z.infer<typeof updateUserProfileSchema>;
+export interface UpdateUserRequest extends Request {
+  body: UpdateUserRequestBody;
 }
 
-// For actions like follow/unfollow, targeting another user
-export interface UserActionRequest extends Request {
-  params: {
-    targetUserId: string; // UUID string of the user to follow/unfollow
-  };
+export interface UpdateProfilePictureRequest extends Request {
+  body: UpdateProfilePictureRequestBody;
 }
 
-export interface SearchUsersRequest extends Request {
-  query: z.infer<typeof searchUsersQuerySchema>;
+export interface UpdatePrivacySettingsRequest extends Request {
+  body: UpdatePrivacySettingsRequestBody;
+}
+
+export interface DeleteUserRequest extends Request {
+  body: DeleteUserRequestBody;
 }

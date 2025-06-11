@@ -4,15 +4,16 @@ import { getNativeClient } from "@/db";
 import { v4 as uuidv4 } from 'uuid';
 
 // BetterAuth configuration
-import { twoFactor } from "better-auth/plugins"
+import { openAPI, twoFactor } from "better-auth/plugins"
 import { emailOTP } from "better-auth/plugins/email-otp";
-import { admin } from "better-auth/plugins/admin";
 import { sendMail } from "../services/email/email";
 import config from "@/config/config";
 
 export const auth = betterAuth({
   database: mongodbAdapter(await getNativeClient()),
-  appName: "ynetwork",
+  appName: "YNetwork",
+  baseURL: config.betterAuth.url,
+  basePath: "/api/better-auth",
   trustedOrigins: [config.server.corsOrigins || "http://localhost:5173"],
   user: {
     modelName: "users",
@@ -25,16 +26,20 @@ export const auth = betterAuth({
     additionalFields: {
       firstName: { fieldName: "first_name", type: "string", input: true, required: true, returned: true },
       lastName: { fieldName: "last_name", type: "string", input: true, required: true, returned: true },
-      country: { fieldName: "country", type: "string", input: false },
-      city: { fieldName: "city", type: "string", input: false },
-      bio: { fieldName: "bio", type: "string", input: false },
-      dateJoined: { fieldName: "date_joined", type: "date", defaultValue: new Date() },
-      lastLogin: { fieldName: "last_login", type: "date", input: false },
-      privacySettings: { fieldName: "privacy_settings", type: "string[]", input: false },
-      role: { fieldName: "role", type: "string", defaultValue: "strudent" },
-      followerCount: { fieldName: "follower_count", type: "number", input: false, defaultValue: 0 },
-      followingCount: { fieldName: "following_count", type: "number", input: false, defaultValue: 0 },
-      postCount: { fieldName: "post_count", type: "number", input: false, defaultValue: 0 },
+      country: { fieldName: "country", type: "string", input: true, required: false, returned: true },
+      city: { fieldName: "city", type: "string", input: true, required: false, returned: true },
+      bio: { fieldName: "bio", type: "string", input: true, required: false, returned: true },
+      dateJoined: { fieldName: "date_joined", type: "date", input: true, required: false, defaultValue: new Date() },
+      lastLogin: { fieldName: "last_login", type: "date", input: true, required: false },
+      privacySettings: { fieldName: "privacy_settings", type: "string[]", input: true, required: false },
+      role: { fieldName: "role", type: "string", defaultValue: "student", input: true, required: false, returned: true },
+      followerCount: { fieldName: "follower_count", type: "number", input: true, required: false, defaultValue: 0 },
+      followingCount: { fieldName: "following_count", type: "number", input: true, required: false, defaultValue: 0 },
+      postCount: { fieldName: "post_count", type: "number", input: true, required: false, defaultValue: 0 },
+      accountPrivacy: { fieldName: "account_privacy", type: "string", defaultValue: "public", required: false, input: true, returned: true },
+    },
+    deleteUser: {
+      enabled: true
     }
   },
   account: {
@@ -85,6 +90,8 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
+      console.log(config.betterAuth.url)
+      console.log(url)
       await sendMail({
         to: user.email, // Changed from user.email
         subject: "Verify Your YNetwork Account",
@@ -133,13 +140,13 @@ export const auth = betterAuth({
       clientId: config.providers.microsoft.clientId,
       clientSecret: config.providers.microsoft.clientSecret,
       tenantId: config.providers.microsoft.tenantId || "common",
-      redirectURI: `${process.env.BASE_URL}/api/auth/callback/microsoft`,
+      redirectURI: `${config.betterAuth.url}/api/auth/callback/microsoft`,
       // Restrict to your school's tenant if possible
     },
     github: {
       clientId: config.providers.github.clientId,
       clientSecret: config.providers.github.clientSecret,
-      redirectURI: `${process.env.BASE_URL}/api/auth/callback/github`,
+      redirectURI: `${config.betterAuth.url}/api/auth/callback/github`,
     },
   },
 
@@ -149,23 +156,22 @@ export const auth = betterAuth({
       ipAddressHeaders: ["x-client-ip", "x-forwarded-for"],
       disableIpTracking: false
     },
-    useSecureCookies: true,
-    disableCSRFCheck: false,
-    crossSubDomainCookies: {
-      enabled: false,
-    },
     cookies: {
       session_token: {
         name: "ynetwork_session",
         attributes: {
           httpOnly: true,
-          secure: true
+          secure: false, // Set to true in production
+          sameSite: "none", // Adjust based on your needs
+          partitioned: true, // Ensures cookies are isolated per top-level site
         }
       }
     },
     defaultCookieAttributes: {
+      secure: false, // Set to true in production
       httpOnly: true,
-      secure: true
+      sameSite: "none",
+      partitioned: true,
     },
     cookiePrefix: "ynetwork",
     database: {
@@ -177,9 +183,11 @@ export const auth = betterAuth({
 
   // Plugins configuration
   plugins: [
+    openAPI(),
     // Two-Factor Authentication
     twoFactor({
       issuer: "YNetwork",
+      skipVerificationOnEnable: true,
       totpOptions: {
         digits: 6,
         period: 30,
@@ -209,20 +217,11 @@ export const auth = betterAuth({
       },
       expiresIn: 60 * 10, // 10 minutes
     }),
-
-    // Admin functionality for school administrators
-    admin({
-      defaultRole: "student",
-      adminRoles: ["admin", "superadmin"],
-      isAdmin: async (user: { role: string; }) => { // This user object comes from better-auth
-        return user.role === "admin"; // Assumes better-auth user object has 'role'
-      },
-    }),
   ],
 
   // CORS and security headers
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
   },
 
@@ -232,5 +231,5 @@ export const auth = betterAuth({
     window: 60 * 1000, // 1 minute
     max: 100, // 100 requests per minute
     storage: "database", // Use database for rate limiting
-  },  
+  },
 });
