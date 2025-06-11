@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 export interface MediaItem {
   media_id: string; // Ref to Media._id
   display_order: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const mediaItemSchema = new Schema<MediaItem>({
@@ -20,6 +22,8 @@ export interface Post extends Document {
   hashtags: Types.Array<string>;
   like_count: number;
   comment_count: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const postSchema = new Schema<Post, Model<Post>>({

@@ -1,4 +1,5 @@
 import express from "express";
+import { app, server } from "./lib/socket";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -7,8 +8,6 @@ import connectMongoDB from "./db";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "@/lib/auth";
 import apiServices from "./services";
-
-const app = express();
 
 app.use(helmet());
 app.use(
@@ -27,7 +26,7 @@ app.use(cookieParser());
 
 app.use("/api", apiServices);
 
-app.listen(config.server.port, async () => {
+server.listen(config.server.port, async () => {
   await connectMongoDB()
   console.log(`🚀 Server running in ${config.env} mode on port ${config.server.port}`);
   if (config.env === "development") {
@@ -35,4 +34,4 @@ app.listen(config.server.port, async () => {
   }
 })
 
-export default app;
+export default server;

@@ -11,6 +11,8 @@ export interface Report extends Document {
   admin_notes?: string;
   resolved_by?: string;
   resolved_timestamp?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const reportSchema = new Schema<Report, Model<Report>>({

@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 export interface SavedPost extends Document {
   user_id: string;
   post_id: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const savedPostSchema = new Schema<SavedPost, Model<SavedPost>>({

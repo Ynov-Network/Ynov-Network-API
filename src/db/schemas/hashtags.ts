@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 export interface Hashtag extends Document {
   tag_name: string;
   post_count: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const hashtagSchema = new Schema<Hashtag, Model<Hashtag>>({

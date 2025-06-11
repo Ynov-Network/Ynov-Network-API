@@ -6,6 +6,8 @@ export interface Message extends Document {
   sender_id?: string;
   content: string;
   read_status: Map<string, Date | boolean | string>;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const messageSchema = new Schema<Message, Model<Message>>({
@@ -13,16 +15,16 @@ const messageSchema = new Schema<Message, Model<Message>>({
   conversation_id: { type: String, ref: 'Conversation', required: true },
   sender_id: { type: String, ref: 'User', default: null },
   content: { type: String, required: true, maxlength: 5000 },
-  read_status: { 
-    type: Map, 
-    of: Schema.Types.Mixed, 
-    default: new Map 
+  read_status: {
+    type: Map,
+    of: Schema.Types.Mixed,
+    default: new Map
   },
 }, {
   timestamps: true,
   _id: false
 });
 
-messageSchema.index({ conversation_id: 1, timestamp: -1 }); 
+messageSchema.index({ conversation_id: 1, timestamp: -1 });
 
 export default model<Message>('Message', messageSchema);

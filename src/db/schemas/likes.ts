@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 export interface Like extends Document {
   post_id: string;
   user_id: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const likeSchema = new Schema<Like, Model<Like>>({

@@ -10,6 +10,8 @@ export interface Notification extends Document {
   target_entity_type?: 'Post' | 'Comment' | 'User' | 'Like' | string;
   target_entity_ref?: string;
   is_read: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const notificationSchema = new Schema<Notification, Model<Notification>>({

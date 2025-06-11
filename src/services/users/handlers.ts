@@ -5,6 +5,7 @@ import cloudinary from '@/lib/cloudinary';
 import { APIError } from 'better-auth/api';
 import { auth } from '@/lib/auth';
 import { setCookieToHeader } from 'better-auth/cookies';
+import Follow from '@/db/schemas/follows';
 
 // Helper to select public fields
 const publicUserFields = 'first_name last_name username profile_picture_url bio country city follower_count following_count post_count date_joined';
@@ -21,6 +22,14 @@ export const getUserProfile = async (req: GetUserProfileRequest, res: Response) 
     if (!user) {
       res.status(404).json({ error: 'User not found.' });
       return;
+    }
+    const requesterId = req.auth?.user?.id;
+    if (user.account_privacy === 'private' && user.id.toString() !== requesterId) {
+      const isFollower = await Follow.findOne({ follower_id: requesterId, following_id: user.id });
+      if (!isFollower) {
+        res.status(403).json({ error: 'This account is private.' });
+        return;
+      }
     }
     // Add logic here to check privacy settings if fetching another user's profile
     res.status(200).json(user);
@@ -50,7 +59,7 @@ export const updateUserProfile = async (req: UpdateUserRequest, res: Response) =
     const response = await auth.api.updateUser({
       body: {
         firstName: first_name,
-        lastName: last_name, 
+        lastName: last_name,
         name: username,
         bio,
         country,

@@ -5,6 +5,8 @@ export interface ConversationParticipant extends Document {
   conversation_id: string;
   user_id: string;
   joined_timestamp: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const conversationParticipantSchema = new Schema<ConversationParticipant, Model<ConversationParticipant>>({

@@ -6,6 +6,10 @@ export interface Conversation extends Document {
   creation_timestamp: Date;
   last_message_timestamp?: Date;
   participants: Types.Array<string>;
+  group_name?: string;
+  group_admin?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const conversationSchema = new Schema<Conversation, Model<Conversation>>({
@@ -13,7 +17,9 @@ const conversationSchema = new Schema<Conversation, Model<Conversation>>({
   type: { type: String, enum: ['one_to_one', 'group'], required: true },
   creation_timestamp: { type: Date, default: Date.now, required: true },
   last_message_timestamp: { type: Date },
-  participants: [{ type: String, ref: 'User' }]
+  participants: [{ type: String, ref: 'User' }],
+  group_name: { type: String, trim: true },
+  group_admin: { type: String, ref: 'User' },
 }, {
   timestamps: true,
   _id: false

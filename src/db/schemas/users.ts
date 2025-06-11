@@ -23,6 +23,8 @@ export interface User extends Document {
   ban_reason?: string;
   ban_expires?: Date;
   account_privacy: 'public' | 'private' | 'followers_only';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const userSchema = new Schema<User, Model<User>>({

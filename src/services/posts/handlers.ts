@@ -10,6 +10,7 @@ import UserModel from '@/db/schemas/users';
 import HashtagModel from '@/db/schemas/hashtags';
 import LikeModel from '@/db/schemas/likes';
 import CommentModel from '@/db/schemas/comments';
+import FollowModel from '@/db/schemas/follows';
 
 // Helper function to manage hashtag counts (remains the same)
 async function manageHashtags(newHashtags: string[], oldHashtags: string[] = []) {
@@ -85,18 +86,42 @@ export const getPostById = async (req: GetPostRequest, res: Response) => {
 	try {
 		const { postId } = req.params;
 		const post = await PostModel.findById(postId)
-			.populate('author_id', 'username profile_picture_url first_name last_name'); // Populate author details
+			.populate('author_id', 'username profile_picture_url first_name last_name account_privacy');
 
 		if (!post) {
 			res.status(404).json({ message: "Post not found" });
 			return;
 		}
 
-		// Visibility checks might still be needed
-		// const currentUserId = (req as AuthenticatedRequest).user?.id;
-		// if (post.visibility === 'private' && post.author_id._id.toString() !== currentUserId) { // Note: post.author_id is now the populated object
-		//    return res.status(403).json({ message: "This post is private." });
-		// }
+		const currentUserId = req.auth?.user?.id;
+		const author = post.author_id as any;
+
+		if (author._id.toString() !== currentUserId) {
+			// Rule 1: If the author's account is private, only followers can see it.
+			// Return 404 to hide the post's existence from non-followers.
+			if (author.account_privacy === 'private') {
+				const isFollower = await FollowModel.findOne({ follower_id: currentUserId, following_id: author._id });
+				if (!isFollower) {
+					res.status(404).json({ message: "Post not found" });
+					return;
+				}
+			}
+
+			// Rule 2: If the post itself is private, only the author can see it.
+			if (post.visibility === 'private') {
+				res.status(404).json({ message: "Post not found" });
+				return;
+			}
+
+			// Rule 3: If the post is for followers only, check the relationship.
+			if (post.visibility === 'followers_only') {
+				const isFollower = await FollowModel.findOne({ follower_id: currentUserId, following_id: author._id });
+				if (!isFollower) {
+					res.status(403).json({ message: "This post is only visible to followers." });
+					return;
+				}
+			}
+		}
 
 		res.status(200).json(post);
 	} catch (error) {

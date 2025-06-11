@@ -9,6 +9,8 @@ export interface Media extends Document {
   file_size?: number;
   upload_timestamp: Date;
   cdn_url?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const mediaSchema = new Schema<Media, Model<Media>>({

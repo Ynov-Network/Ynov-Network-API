@@ -5,7 +5,8 @@ export interface Comment extends Document {
   post_id: string;
   author_id: string;
   content: string;
-  timestamp: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const commentSchema = new Schema<Comment, Model<Comment>>({
