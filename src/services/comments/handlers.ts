@@ -31,29 +31,20 @@ export const createComment = async (req: CreateCommentRequest, res: Response) =>
 
     await PostModel.findByIdAndUpdate(postId, { $inc: { comment_count: 1 } });
 
-    if (authorId !== post.author_id.toString()) {
+    if (post.author_id.toString() !== authorId) {
       await createNotification(post.author_id.toString(), {
         actor_id: authorId,
-        type: 'new_comment',
-        target_entity_type: 'Post',
-        target_entity_id: postId,
-        content: newComment.content.substring(0, 50),
+        type: "comment",
+        content: content.substring(0, 100),
+        target_entity_id: post._id.toString(),
+        target_entity_type: "Post",
+        target_entity_ref: post.content,
       });
     }
 
-    res.status(201).json({ message: 'Comment created successfully', comment: newComment });
+    res.status(201).json({ message: 'Comment added successfully', comment: newComment });
   } catch (error) {
     console.error('Error creating comment:', error);
-    if (error instanceof Error) {
-      if (error.name === 'ValidationError') {
-        res.status(400).json({ message: 'Validation Error', errors: (error as any).errors });
-        return;
-      }
-      if ((error as any).kind === 'ObjectId' && (error as any).path === '_id') {
-        res.status(400).json({ message: "Invalid Post ID format." });
-        return;
-      }
-    }
     res.status(500).json({ message: 'Internal server error while creating comment.' });
   }
 };
@@ -61,8 +52,8 @@ export const createComment = async (req: CreateCommentRequest, res: Response) =>
 export const getCommentsByPost = async (req: GetCommentsByPostRequest, res: Response) => {
   try {
     const { postId } = req.params;
-    const page = parseInt(req.query.page || '1', 10);
-    const limit = parseInt(req.query.limit || '10', 10);
+    const page = Number.parseInt(req.query.page || '1', 10);
+    const limit = Number.parseInt(req.query.limit || '10', 10);
 
     const postExists = await PostModel.findById(postId).select('_id');
     if (!postExists) {
@@ -90,10 +81,6 @@ export const getCommentsByPost = async (req: GetCommentsByPostRequest, res: Resp
     });
   } catch (error) {
     console.error('Error fetching comments:', error);
-    if (error instanceof Error && (error as any).kind === 'ObjectId') {
-      res.status(400).json({ message: "Invalid Post ID format." });
-      return;
-    }
     res.status(500).json({ message: 'Internal server error while fetching comments.' });
   }
 };
@@ -122,16 +109,6 @@ export const updateComment = async (req: UpdateCommentRequest, res: Response) =>
     res.status(200).json({ message: 'Comment updated successfully', comment });
   } catch (error) {
     console.error('Error updating comment:', error);
-    if (error instanceof Error) {
-      if (error.name === 'ValidationError') {
-        res.status(400).json({ message: 'Validation Error', errors: (error as any).errors });
-        return;
-      }
-      if ((error as any).kind === 'ObjectId') {
-        res.status(400).json({ message: "Invalid Comment ID format." });
-        return;
-      }
-    }
     res.status(500).json({ message: 'Internal server error while updating comment.' });
   }
 };
@@ -166,10 +143,6 @@ export const deleteComment = async (req: DeleteCommentRequest, res: Response) =>
     res.status(200).json({ message: 'Comment deleted successfully.' });
   } catch (error) {
     console.error('Error deleting comment:', error);
-    if (error instanceof Error && (error as any).kind === 'ObjectId') {
-      res.status(400).json({ message: "Invalid Comment ID or Post ID format." });
-      return;
-    }
     res.status(500).json({ message: 'Internal server error while deleting comment.' });
   }
 };

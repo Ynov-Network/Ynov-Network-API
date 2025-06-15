@@ -9,5 +9,6 @@ export interface GetSavedPostsRequest extends Request {
   query: {
     page: string;
     limit: string;
+    q?: string;
   }
 };

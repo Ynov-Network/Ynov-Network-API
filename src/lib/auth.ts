@@ -1,7 +1,6 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { getNativeClient } from "@/db";
-import { v4 as uuidv4 } from 'uuid';
 
 // BetterAuth configuration
 import { openAPI, twoFactor } from "better-auth/plugins"
@@ -68,12 +67,13 @@ export const auth = betterAuth({
       ipAddress: "ip_address",
       userAgent: "user_agent",
     },
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // Update daily
+    expiresIn: 1209600, // 14 days (instead of 7)
+    updateAge: 43200, // 12 hours (instead of 1 day)
+    storeSessionInDatabase: true,
     cookieCache: {
       enabled: true,
-      maxAge: 60 * 5, // 5 minutes
-    },
+      maxAge: 1800 // 30 minutes (instead of 5)
+    }
   },
   verification: {
     modelName: "verifications",
@@ -153,32 +153,32 @@ export const auth = betterAuth({
   // Advanced security options
   advanced: {
     ipAddress: {
-      ipAddressHeaders: ["x-client-ip", "x-forwarded-for"],
-      disableIpTracking: false
+      ipAddressHeaders: [
+        "cf-connecting-ip",      // Cloudflare
+        "x-real-ip",             // Nginx
+        "x-forwarded-for",       // Load balancers
+        "x-client-ip"            // Other proxies
+      ],
+      disableIpTracking: false // Keep enabled for security
     },
     cookies: {
       session_token: {
         name: "ynetwork_session",
         attributes: {
           httpOnly: true,
-          secure: false, // Set to true in production
-          sameSite: "none", // Adjust based on your needs
-          partitioned: true, // Ensures cookies are isolated per top-level site
+          secure: false,
+          sameSite: "lax", // Better for social features
+          maxAge: 1209600, // 14 days (matches session config)
         }
       }
     },
     defaultCookieAttributes: {
       secure: false, // Set to true in production
       httpOnly: true,
-      sameSite: "none",
-      partitioned: true,
+      sameSite: "lax",
+      maxAge: 1209600, // 14 days
     },
     cookiePrefix: "ynetwork",
-    database: {
-      generateId: () => {
-        return uuidv4();
-      },
-    }
   },
 
   // Plugins configuration

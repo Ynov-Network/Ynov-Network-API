@@ -1,7 +1,7 @@
 import type { Response } from 'express';
 import type { ToggleLikeRequest, GetLikesForPostRequest } from './request-types';
-import LikeModel from '@/db/schemas/likes';   
-import PostModel from '@/db/schemas/posts';   
+import LikeModel from '@/db/schemas/likes';
+import PostModel from '@/db/schemas/posts';
 import { createNotification } from '../notifications/handlers';
 
 export const toggleLike = async (req: ToggleLikeRequest, res: Response) => {
@@ -34,9 +34,11 @@ export const toggleLike = async (req: ToggleLikeRequest, res: Response) => {
     if (userId !== post.author_id.toString()) {
       await createNotification(post.author_id.toString(), {
         actor_id: userId,
-        type: 'new_like',
+        type: 'like',
+        content: 'liked your post.',
+        target_entity_id: post._id.toString(),
         target_entity_type: 'Post',
-        target_entity_id: postId,
+        target_entity_ref: post.content,
       });
     }
 

@@ -3,6 +3,7 @@ import type {
   SendMessageBody,
   CreateConversationBody,
   ConversationIdParams,
+  MarkReadBody,
 } from "./validations";
 
 // POST /conversations
@@ -31,4 +32,10 @@ export interface GetMessagesRequest extends Request {
 export interface SendMessageRequest extends Request {
   params: ConversationIdParams;
   body: SendMessageBody;
+}
+
+// PUT /conversations/:conversationId/read
+export interface MarkMessagesAsReadRequest extends Request {
+  params: ConversationIdParams;
+  body: MarkReadBody;
 }

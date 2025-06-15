@@ -5,6 +5,11 @@ export const postIdParamsSchema = z.object({
 });
 export type PostIdParams = z.infer<typeof postIdParamsSchema>;
 
+export const userIdParamsSchema = z.object({
+  userId: z.string().min(1, "User ID cannot be empty."), // Assuming IDs are strings (like UUIDs from your models)
+});
+export type UserIdParams = z.infer<typeof userIdParamsSchema>;
+
 const mediaItemSchemaValidation = z.object({
   media_id: z.string().min(1, "Media ID cannot be empty."),
   display_order: z.number().int().min(0).default(0),
@@ -26,3 +31,9 @@ export const updatePostBodySchema = z.strictObject({
   hashtags: z.array(z.string().min(1).max(50).regex(/^[a-zA-Z0-9_]+$/, "Hashtags can only contain letters, numbers, and underscores.")).max(10).optional(),
 });
 export type UpdatePostRequestBody = z.infer<typeof updatePostBodySchema>;
+
+export const getPostsByUserQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(10),
+});
+export type GetPostsByUserQuery = z.infer<typeof getPostsByUserQuerySchema>;

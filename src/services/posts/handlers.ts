@@ -1,71 +1,112 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import type {
 	CreatePostRequest,
 	UpdatePostRequest,
 	DeletePostRequest,
-	GetPostRequest
+	GetPostRequest,
+	GetPostsByUserRequest
 } from './request-types';
 import PostModel from '@/db/schemas/posts';
-import UserModel from '@/db/schemas/users';
+import UserModel, { User } from '@/db/schemas/users';
 import HashtagModel from '@/db/schemas/hashtags';
 import LikeModel from '@/db/schemas/likes';
 import CommentModel from '@/db/schemas/comments';
 import FollowModel from '@/db/schemas/follows';
+import SavedPostModel from '@/db/schemas/saved_posts';
 
-// Helper function to manage hashtag counts (remains the same)
-async function manageHashtags(newHashtags: string[], oldHashtags: string[] = []) {
-	const lowerNew = newHashtags.map(tag => tag.toLowerCase().trim());
-	const lowerOld = oldHashtags.map(tag => tag.toLowerCase().trim());
-	const added = lowerNew.filter(tag => !lowerOld.includes(tag));
-	const removed = lowerOld.filter(tag => !lowerNew.includes(tag));
-	for (const tagName of added) {
-		if (!tagName) continue;
-		await HashtagModel.findOneAndUpdate(
-			{ tag_name: tagName },
-			{ $inc: { post_count: 1 }, $setOnInsert: { tag_name: tagName } },
-			{ upsert: true, new: true }
-		);
+// Helper function to find/create hashtags and return their IDs
+async function upsertHashtags(tagNames: string[]): Promise<Types.ObjectId[]> {
+	if (!tagNames || tagNames.length === 0) {
+		return [];
 	}
-	for (const tagName of removed) {
-		if (!tagName) continue;
-		await HashtagModel.findOneAndUpdate(
-			{ tag_name: tagName },
-			{ $inc: { post_count: -1 } },
-			{ new: true }
-		);
+
+	const uniqueTagNames = [...new Set(tagNames.map(tag => tag.toLowerCase().trim()).filter(Boolean))];
+
+	const operations = uniqueTagNames.map(tagName => ({
+		updateOne: {
+			filter: { tag_name: tagName },
+			update: { $setOnInsert: { tag_name: tagName } },
+			upsert: true,
+		}
+	}));
+
+	if (operations.length > 0) {
+		await HashtagModel.bulkWrite(operations);
+	}
+
+	const hashtags = await HashtagModel.find({ tag_name: { $in: uniqueTagNames } }).select('_id');
+	return hashtags.map(h => h._id);
+}
+
+// Helper function to update hashtag counts
+async function updateHashtagCounts(added: Types.ObjectId[], removed: Types.ObjectId[]) {
+	if (added.length > 0) {
+		await HashtagModel.updateMany({ _id: { $in: added } }, { $inc: { post_count: 1 } });
+	}
+	if (removed.length > 0) {
+		await HashtagModel.updateMany({ _id: { $in: removed } }, { $inc: { post_count: -1 } });
 	}
 }
 
-export const createPost = async (req: CreatePostRequest, res: Response) => {
-	if (!req.auth.user) {
-		res.status(401).json({ message: 'Unauthorized: User not authenticated.' });
-		return;
+const enrichPostsWithUserContext = async (posts: any[], userId?: string) => {
+	const populatedPosts = await PostModel.populate(posts, [
+		{ path: 'author_id', select: 'username profile_picture_url first_name last_name' },
+		{ path: 'media_items.media_id' },
+		{ path: 'hashtags', select: 'tag_name' }
+	]);
+
+	const finalPosts = populatedPosts.map(p => ({
+		...p,
+		hashtags: p.hashtags.map((h: any) => h.tag_name)
+	}));
+
+	if (!userId) {
+		return finalPosts.map(post => ({
+			...post,
+			is_liked: false,
+			is_saved: false,
+		}));
 	}
 
+	const postIds = finalPosts.map(p => p._id);
+	const likedPosts = await LikeModel.find({ user_id: userId, post_id: { $in: postIds } }).select('post_id').lean();
+	const savedPosts = await SavedPostModel.find({ user_id: userId, post_id: { $in: postIds } }).select('post_id').lean();
+
+	const likedPostIds = new Set(likedPosts.map(lp => lp.post_id.toString()));
+	const savedPostIds = new Set(savedPosts.map(sp => sp.post_id.toString()));
+
+	return finalPosts.map(post => ({
+		...post,
+		is_liked: likedPostIds.has(post._id.toString()),
+		is_saved: savedPostIds.has(post._id.toString()),
+	}));
+};
+
+export const createPost = async (req: CreatePostRequest, res: Response) => {
 	try {
 		const { content, visibility, media_items, hashtags } = req.body;
-		const { id: userId } = req.auth.user; // We only need the ID to set author_id
+		const { id: userId } = req.auth.user;
 
 		if (!content && (!media_items || media_items.length === 0)) {
 			res.status(400).json({ message: 'Post must have content or media.' });
 			return;
 		}
 
+		const hashtagIds = await upsertHashtags(hashtags || []);
+
 		const newPost = new PostModel({
-			author_id: userId, // Set the author reference
-			// author_info is no longer part of the model
+			author_id: userId,
 			content,
 			visibility,
 			media_items: media_items || [],
-			hashtags: hashtags ? hashtags.map(h => h.toLowerCase().trim()).filter(Boolean) : [],
+			hashtags: hashtagIds,
 		});
 
 		await newPost.save();
 		await UserModel.findByIdAndUpdate(userId, { $inc: { post_count: 1 } });
 
-		if (hashtags && hashtags.length > 0) {
-			await manageHashtags(newPost.hashtags as string[]);
-		}
+		await updateHashtagCounts(hashtagIds, []);
 
 		// To return the post with author details, populate it:
 		const populatedPost = await PostModel.findById(newPost._id)
@@ -74,10 +115,6 @@ export const createPost = async (req: CreatePostRequest, res: Response) => {
 		res.status(201).json({ message: 'Post created successfully', post: populatedPost });
 	} catch (error) {
 		console.error('Error creating post:', error);
-		if (error instanceof Error && error.name === 'ValidationError') {
-			res.status(400).json({ message: 'Validation Error', errors: (error as import('mongoose').Error.ValidationError).errors });
-			return;
-		}
 		res.status(500).json({ message: 'Internal server error while creating post.' });
 	}
 };
@@ -86,7 +123,7 @@ export const getPostById = async (req: GetPostRequest, res: Response) => {
 	try {
 		const { postId } = req.params;
 		const post = await PostModel.findById(postId)
-			.populate('author_id', 'username profile_picture_url first_name last_name account_privacy');
+			.populate<{ author_id: User }>('author_id', 'username profile_picture_url first_name last_name account_privacy');
 
 		if (!post) {
 			res.status(404).json({ message: "Post not found" });
@@ -94,7 +131,12 @@ export const getPostById = async (req: GetPostRequest, res: Response) => {
 		}
 
 		const currentUserId = req.auth?.user?.id;
-		const author = post.author_id as any;
+		const author = post.author_id;
+
+		if (!author) {
+			res.status(404).json({ message: "Post author not found." });
+			return;
+		}
 
 		if (author._id.toString() !== currentUserId) {
 			// Rule 1: If the author's account is private, only followers can see it.
@@ -123,13 +165,11 @@ export const getPostById = async (req: GetPostRequest, res: Response) => {
 			}
 		}
 
-		res.status(200).json(post);
+		const enrichedPost = await enrichPostsWithUserContext([post], currentUserId);
+
+		res.status(200).json(enrichedPost[0]);
 	} catch (error) {
 		console.error('Error fetching post:', error);
-		if (error instanceof Error && (error as any).kind === 'ObjectId') {
-			res.status(400).json({ message: "Invalid Post ID format." });
-			return;
-		}
 		res.status(500).json({ message: 'Internal server error while fetching post.' });
 	}
 };
@@ -157,14 +197,17 @@ export const updatePost = async (req: UpdatePostRequest, res: Response) => {
 			return;
 		}
 
-		const oldHashtags = post.hashtags ? [...post.hashtags as string[]] : [];
+		const oldHashtagIds = post.hashtags.map(id => new Types.ObjectId(id));
 
 		if (updateData.content !== undefined) post.content = updateData.content;
 		if (updateData.visibility) post.visibility = updateData.visibility;
 		if (updateData.media_items) post.media_items = updateData.media_items as any;
-		if (updateData.hashtags) post.hashtags = updateData.hashtags.map(h => h.toLowerCase().trim()).filter(Boolean) as any;
 
-		// author_info is no longer updated here as it's removed from the model
+		let newHashtagIds: Types.ObjectId[] = oldHashtagIds;
+		if (updateData.hashtags) {
+			newHashtagIds = await upsertHashtags(updateData.hashtags);
+			post.hashtags = newHashtagIds as any;
+		}
 
 		if (!post.content && (!post.media_items || post.media_items.length === 0)) {
 			res.status(400).json({ message: 'Post must have content or media after update.' });
@@ -173,9 +216,9 @@ export const updatePost = async (req: UpdatePostRequest, res: Response) => {
 
 		await post.save();
 
-		if (updateData.hashtags) {
-			await manageHashtags(post.hashtags as string[], oldHashtags);
-		}
+		const addedIds = newHashtagIds.filter(id => !oldHashtagIds.some(oldId => oldId.equals(id)));
+		const removedIds = oldHashtagIds.filter(id => !newHashtagIds.some(newId => newId.equals(id)));
+		await updateHashtagCounts(addedIds, removedIds);
 
 		// Populate author details for the response
 		const populatedPost = await PostModel.findById(post._id)
@@ -184,10 +227,6 @@ export const updatePost = async (req: UpdatePostRequest, res: Response) => {
 		res.status(200).json({ message: 'Post updated successfully', post: populatedPost });
 	} catch (error) {
 		console.error('Error updating post:', error);
-		if (error instanceof Error && error.name === 'ValidationError') {
-			res.status(400).json({ message: 'Validation Error', errors: (error as import('mongoose').Error.ValidationError).errors });
-			return;
-		}
 		res.status(500).json({ message: 'Internal server error while updating post.' });
 	}
 };
@@ -223,7 +262,7 @@ export const deletePost = async (req: DeletePostRequest, res: Response) => {
 		await UserModel.findByIdAndUpdate(userId, { $inc: { post_count: -1 } });
 
 		if (deletedPost.hashtags && deletedPost.hashtags.length > 0) {
-			await manageHashtags([], deletedPost.hashtags as string[]);
+			await updateHashtagCounts([], deletedPost.hashtags);
 		}
 
 		await LikeModel.deleteMany({ post_id: postId });
@@ -233,5 +272,36 @@ export const deletePost = async (req: DeletePostRequest, res: Response) => {
 	} catch (error) {
 		console.error('Error deleting post:', error);
 		res.status(500).json({ message: 'Internal server error while deleting post.' });
+	}
+};
+
+export const getPostsByUser = async (req: GetPostsByUserRequest, res: Response) => {
+	try {
+		const { userId } = req.params;
+		const page = Number.parseInt(req.query?.page || '1', 10);
+		const limit = Number.parseInt(req.query?.limit || '10', 10);
+		const skip = (page - 1) * limit;
+
+		const posts = await PostModel.find({ author_id: userId })
+			.sort({ createdAt: -1 })
+			.skip(skip)
+			.limit(limit)
+			.lean();
+
+		const totalPosts = await PostModel.countDocuments({ author_id: userId });
+
+		const currentUserId = req.auth?.user?.id;
+		const enrichedPosts = await enrichPostsWithUserContext(posts, currentUserId);
+
+		res.status(200).json({
+			posts: enrichedPosts,
+			page,
+			limit,
+			totalPages: Math.ceil(totalPosts / limit),
+			totalCount: totalPosts,
+		});
+	} catch (error) {
+		console.error('Error fetching post:', error);
+		res.status(500).json({ message: 'Internal server error while fetching user posts.' });
 	}
 };

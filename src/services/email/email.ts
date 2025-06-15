@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import config from "../../config/config"
+import config from "@/config/config"
 import type Mail from "nodemailer/lib/mailer";
 import { sendMailOptionsSchema } from "./validations";
 

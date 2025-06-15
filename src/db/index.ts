@@ -4,7 +4,7 @@ import config from "@/config/config";
 const connectMongoDB = async () => {
   try {
     const mongooseConnection = await mongoose.connect(config.database.url, {
-      dbName: "ynetwork",
+      dbName: "ynetwork_db",
     });
     console.log(`MongoDB connected: ${mongooseConnection.connection.host}`);
     return mongooseConnection;

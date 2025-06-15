@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import * as messageHandlers from './handlers';
-import { protectRoute } from '@/common/middleware/auth.middleware';
 import { validationMiddleware } from '@/common/middleware/validation.middleware';
 import {
   conversationIdParamSchema,
@@ -8,6 +7,7 @@ import {
   createConversationBodySchema,
   getMessagesQuerySchema,
   getConversationsQuerySchema,
+  markReadBodySchema,
 } from './validations';
 
 const router = Router();
@@ -15,7 +15,6 @@ const router = Router();
 // Get all conversations for the logged-in user
 router.get(
   '/',
-  protectRoute,
   validationMiddleware({ query: getConversationsQuerySchema }),
   messageHandlers.getConversationsForUser
 );
@@ -23,7 +22,6 @@ router.get(
 // Create a new one-on-one conversation
 router.post(
   '/',
-  protectRoute,
   validationMiddleware({ body: createConversationBodySchema }),
   messageHandlers.createConversation
 );
@@ -31,7 +29,6 @@ router.post(
 // Get messages for a specific conversation
 router.get(
   '/:conversationId/messages',
-  protectRoute,
   validationMiddleware({ params: conversationIdParamSchema, query: getMessagesQuerySchema }),
   messageHandlers.getMessagesForConversation
 );
@@ -39,9 +36,15 @@ router.get(
 // Send a message to a specific conversation
 router.post(
   '/:conversationId/messages',
-  protectRoute,
   validationMiddleware({ params: conversationIdParamSchema, body: sendMessageBodySchema }),
   messageHandlers.sendMessage
+);
+
+// Mark messages in a conversation as read
+router.put(
+  '/:conversationId/read',
+  validationMiddleware({ params: conversationIdParamSchema, body: markReadBodySchema }),
+  messageHandlers.markMessagesAsRead
 );
 
 export default router; 

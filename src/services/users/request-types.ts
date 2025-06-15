@@ -1,10 +1,14 @@
 import type { Request } from "express";
-import type { DeleteUserRequestBody, UpdatePrivacySettingsRequestBody, UpdateProfilePictureRequestBody, UpdateUserRequestBody } from "./validations";
+import type { 
+  DeleteUserRequestBody, 
+  UpdatePrivacySettingsRequestBody, 
+  UpdateProfilePictureRequestBody, 
+  UpdateUserRequestBody, 
+  UserIdParams 
+} from "./validations";
 
 export interface GetUserProfileRequest extends Request {
-  params: {
-    userId?: string;
-  };
+  params: UserIdParams;
 }
 
 export interface UpdateUserRequest extends Request {
@@ -21,4 +25,10 @@ export interface UpdatePrivacySettingsRequest extends Request {
 
 export interface DeleteUserRequest extends Request {
   body: DeleteUserRequestBody;
+}
+
+export interface GetSuggestedUsersRequest extends Request {
+  query: {
+    limit?: string;
+  };
 }

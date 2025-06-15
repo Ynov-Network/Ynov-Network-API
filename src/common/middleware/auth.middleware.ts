@@ -1,7 +1,7 @@
-import { User } from '@/db/schemas/users';
+import type { Request, Response, NextFunction } from 'express';
+import type { User } from '@/db/schemas/users';
 import { auth } from '@/lib/auth';
 import { fromNodeHeaders } from "better-auth/node";
-import type { Request, Response, NextFunction } from 'express';
 
 export interface RequestUser {
   auth: {
@@ -17,16 +17,14 @@ declare global {
   }
 }
 
-export interface AuthenticatedRequest extends Request {
-  auth: RequestUser["auth"];
-}
-
-export const protectRoute = async (req: Request, res: Response, next: NextFunction) => {
+export const protectedRoutesMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(req.headers),
   });
 
-  if (!session?.user) {
+  console.log('Session:', session?.user);
+
+  if (!session || !session?.user) {
     res.status(401).json({ message: 'Unauthorized: No active session found.' });
     return;
   }

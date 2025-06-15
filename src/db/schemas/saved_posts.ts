@@ -1,20 +1,18 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import { Schema, model, type Document, type Model, Types } from 'mongoose';
 
 export interface SavedPost extends Document {
-  user_id: string;
-  post_id: string;
+  _id: Types.ObjectId;
+  user_id: Types.ObjectId;
+  post_id: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const savedPostSchema = new Schema<SavedPost, Model<SavedPost>>({
-  _id: { type: String, default: () => uuidv4() },
-  user_id: { type: String, ref: 'User', required: true },
-  post_id: { type: String, ref: 'Post', required: true },
+  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  post_id: { type: Schema.Types.ObjectId, ref: 'Post', required: true },
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: false },
-  _id: false,
   versionKey: false,
 });
 

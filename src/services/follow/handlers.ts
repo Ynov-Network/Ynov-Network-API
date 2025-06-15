@@ -111,8 +111,8 @@ export const unfollowUser = async (req: FollowRequest, res: Response) => {
 
 export const getFollowers = async (req: GetFollowsRequest, res: Response) => {
   const { userId } = req.params;
-  const page = parseInt(req.query.page || '1', 10);
-  const limit = parseInt(req.query.limit || '10', 10);
+  const page = Number.parseInt(req.query.page || '1', 10);
+  const limit = Number.parseInt(req.query.limit || '10', 10);
 
   const skip = (page - 1) * limit;
 
@@ -141,8 +141,8 @@ export const getFollowers = async (req: GetFollowsRequest, res: Response) => {
 
 export const getFollowing = async (req: GetFollowsRequest, res: Response) => {
   const { userId } = req.params;
-  const page = parseInt(req.query.page || '1', 10);
-  const limit = parseInt(req.query.limit || '10', 10);
+  const page = Number.parseInt(req.query.page || '1', 10);
+  const limit = Number.parseInt(req.query.limit || '10', 10);
 
   const skip = (page - 1) * limit;
 

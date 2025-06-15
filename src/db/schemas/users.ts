@@ -1,7 +1,7 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import { Schema, model, type Document, type Model, Types } from 'mongoose';
 
 export interface User extends Document {
+  _id: Types.ObjectId;
   university_email: string;
   first_name: string;
   last_name: string;
@@ -28,7 +28,6 @@ export interface User extends Document {
 }
 
 const userSchema = new Schema<User, Model<User>>({
-  _id: { type: String, default: () => uuidv4() },
   university_email: { type: String, required: true, unique: true, trim: true, lowercase: true },
   first_name: { type: String, trim: true, maxlength: 50 },
   last_name: { type: String, trim: true, maxlength: 50 },
@@ -52,7 +51,6 @@ const userSchema = new Schema<User, Model<User>>({
   account_privacy: { type: String, enum: ['public', 'private', 'followers_only'], default: 'public' },
 }, {
   timestamps: true,
-  _id: false
 });
 
 export default model<User>('User', userSchema);

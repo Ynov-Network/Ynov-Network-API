@@ -1,20 +1,19 @@
 import { Router } from 'express';
 import * as postHandlers from './handlers';
-import { validationMiddleware } from '../../common/middleware/validation.middleware'; // Adjust path
+import { validationMiddleware } from '@/common/middleware/validation.middleware'; // Adjust path
 import {
 	createPostBodySchema,
 	updatePostBodySchema,
-	postIdParamsSchema
+	postIdParamsSchema,
+	userIdParamsSchema,
+	getPostsByUserQuerySchema
 } from './validations';
-// Assuming an authMiddleware that populates req.user
-// import { requireAuth } from '../../middlewares/authMiddleware'; // Example auth middleware
 
 const router = Router();
 
 // Create a new post (requires authentication)
 router.post(
 	'/',
-	// requireAuth, // Apply authentication middleware
 	validationMiddleware({ body: createPostBodySchema }),
 	postHandlers.createPost
 );
@@ -26,10 +25,17 @@ router.get(
 	postHandlers.getPostById
 );
 
+// Get all posts by a specific user
+router.get(
+	'/user/:userId',
+	validationMiddleware({ params: userIdParamsSchema }), // You'll need to create a userId schema or reuse
+	validationMiddleware({ query: getPostsByUserQuerySchema }),
+	postHandlers.getPostsByUser
+);
+
 // Update an existing post (requires authentication and ownership)
 router.put(
 	'/:postId',
-	// requireAuth,
 	validationMiddleware({ params: postIdParamsSchema, body: updatePostBodySchema }),
 	postHandlers.updatePost
 );
@@ -37,7 +43,6 @@ router.put(
 // Delete a post (requires authentication and ownership)
 router.delete(
 	'/:postId',
-	// requireAuth,
 	validationMiddleware({ params: postIdParamsSchema }),
 	postHandlers.deletePost
 );

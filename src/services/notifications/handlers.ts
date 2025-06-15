@@ -30,7 +30,7 @@ export const createNotification = async (recipientId: string, payload: Notificat
     await notification.save();
 
     // Populate actor details for the real-time event
-    const populatedNotification = await notification.populate('actor_id', 'username profile_picture_url');
+    const populatedNotification = await notification.populate('actor_id', 'username first_name last_name profile_picture_url');
 
     const receiverSocketId = getReceiverSocketId(recipientId);
     if (receiverSocketId) {
@@ -43,8 +43,8 @@ export const createNotification = async (recipientId: string, payload: Notificat
 
 export const getNotifications = async (req: GetNotificationsRequest, res: Response) => {
   const userId = req.auth.user?.id;
-  const page = parseInt(req.query.page || '1', 10);
-  const limit = parseInt(req.query.limit || '10', 10);
+  const page = Number.parseInt(req.query.page || '1', 10);
+  const limit = Number.parseInt(req.query.limit || '10', 10);
   const filter = req.query.filter || "all";
 
   const skip = (page - 1) * limit;
@@ -56,7 +56,7 @@ export const getNotifications = async (req: GetNotificationsRequest, res: Respon
     }
 
     const notifications = await NotificationModel.find(query)
-      .populate('actor_id', 'username profile_picture_url')
+      .populate('actor_id', 'username first_name last_name profile_picture_url')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -114,4 +114,23 @@ export const markAllAsRead = async (req: MarkAllNotificationsAsReadRequest, res:
     console.error('Error marking all notifications as read:', error);
     res.status(500).json({ message: 'Internal server error.' });
   }
-}; 
+};
+
+export const deleteNotification = async (req: MarkNotificationAsReadRequest, res: Response) => {
+  const userId = req.auth.user?.id;
+  const { notificationId } = req.params;
+
+  try {
+    const result = await NotificationModel.deleteOne({ _id: notificationId, recipient_id: userId });
+
+    if (result.deletedCount === 0) {
+      res.status(404).json({ message: "Notification not found or you don't have permission to delete it." });
+      return;
+    }
+
+    res.status(200).json({ message: 'Notification deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ message: 'Internal server error while deleting notification.' });
+  }
+} 

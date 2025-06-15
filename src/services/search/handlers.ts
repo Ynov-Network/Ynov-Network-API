@@ -1,11 +1,11 @@
 import type { Response } from 'express';
 import type { SearchRequest } from './request-types';
-import UserModel, { User } from '@/db/schemas/users';
-import PostModel, { Post } from '@/db/schemas/posts';
+import UserModel, { type User } from '@/db/schemas/users';
+import PostModel, { type Post } from '@/db/schemas/posts';
 
 export const performSearch = async (req: SearchRequest, res: Response) => {
-  const page = parseInt(req.query.page || '1', 10);
-  const limit = parseInt(req.query.limit || '10', 10);
+  const page = Number.parseInt(req.query.page || '1', 10);
+  const limit = Number.parseInt(req.query.limit || '10', 10);
   const skip = (page - 1) * limit;
   
   const q = req.query.q || '';

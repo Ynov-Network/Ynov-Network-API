@@ -1,25 +1,26 @@
-import { Schema, model, type Document, type Model, type Types } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import { Schema, model, type Document, type Model, Types } from 'mongoose';
 
 export interface MediaItem {
-  media_id: string; // Ref to Media._id
+  _id: Types.ObjectId;
+  media_id: Types.ObjectId;
   display_order: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const mediaItemSchema = new Schema<MediaItem>({
-  media_id: { type: String, ref: 'Media', required: true },
+  media_id: { type: Schema.Types.ObjectId, ref: 'Media', required: true },
   display_order: { type: Number, default: 0 },
-}, { _id: false });
+}, { timestamps: true });
 
 export interface Post extends Document {
-  author_id: string;
+  _id: Types.ObjectId;
+  author_id: Types.ObjectId;
   content?: string;
   timestamp: Date;
   visibility: 'public' | 'followers_only' | 'private';
   media_items: Types.DocumentArray<MediaItem>;
-  hashtags: Types.Array<string>;
+  hashtags: Types.Array<Types.ObjectId>;
   like_count: number;
   comment_count: number;
   createdAt: Date;
@@ -27,8 +28,7 @@ export interface Post extends Document {
 }
 
 const postSchema = new Schema<Post, Model<Post>>({
-  _id: { type: String, default: () => uuidv4() },
-  author_id: { type: String, ref: 'User', required: true, index: true },
+  author_id: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   content: { type: String, maxlength: 2000 },
   timestamp: { type: Date, default: Date.now, required: true },
   visibility: {
@@ -38,14 +38,14 @@ const postSchema = new Schema<Post, Model<Post>>({
     required: true,
   },
   media_items: [mediaItemSchema],
-  hashtags: [{ type: String, ref: 'Hashtag' }],
+  hashtags: [{ type: Schema.Types.ObjectId, ref: 'Hashtag' }],
   like_count: { type: Number, default: 0, min: 0, required: true },
   comment_count: { type: Number, default: 0, min: 0, required: true },
 }, {
   timestamps: true,
 });
 
-postSchema.index({ author_user_id: 1, timestamp: -1 });
+postSchema.index({ author_id: 1, createdAt: -1 });
 postSchema.index({ hashtags: 1 });
 
 export default model<Post>('Post', postSchema);
