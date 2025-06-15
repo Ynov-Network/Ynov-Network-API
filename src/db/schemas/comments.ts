@@ -1,24 +1,23 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import { Schema, model, type Document, type Model, Types } from 'mongoose';
 
-// Base interface
 export interface Comment extends Document {
-  post_id: string;
-  author_id: string;
+  _id: Types.ObjectId;
+  post_id: Types.ObjectId;
+  author_id: Types.ObjectId;
   content: string;
-  timestamp: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const commentSchema = new Schema<Comment, Model<Comment>>({
-  _id: { type: String, default: () => uuidv4() },
-  post_id: { type: String, ref: 'Post', required: true },
-  author_id: { type: String, ref: 'User', required: true },
+  post_id: { type: Schema.Types.ObjectId, ref: 'Post', required: true },
+  author_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   content: { type: String, required: true, maxlength: 1000 },
 }, {
   timestamps: true,
 });
 
-commentSchema.index({ post_id: 1, timestamp: 1 });
-commentSchema.index({ author_user_id: 1 });
+commentSchema.index({ post_id: 1, createdAt: 1 });
+commentSchema.index({ author_id: 1 });
 
 export default model<Comment>('Comment', commentSchema);

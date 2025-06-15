@@ -1,68 +1,40 @@
 import { Router } from 'express';
+import { validationMiddleware } from '@/common/middleware/validation.middleware';
 import * as userHandlers from './handlers';
+import { 
+  updateUserSchema, 
+  updatePrivacySettingsSchema, 
+  updateProfilePictureSchema, 
+  getSuggestedUsersQuerySchema 
+} from './validations';
+import followRouter from '../follow/routes';
 
 const router = Router();
 
-router.get(
-  '/:userId',
-  validate(userValidations.userIdSchema),
-  userHandlers.getUserProfileById
-);
+// Get own profile
+router.get('/me', userHandlers.getMyProfile);
 
-// Get user profile by username
-router.get(
-  '/username/:username',
-  validate(userValidations.usernameSchema),
-  userHandlers.getUserProfileByUsername
-);
+// Update own profile (text fields)
+router.put('/me', validationMiddleware({ body: updateUserSchema }), userHandlers.updateUserProfile);
 
-// Search users
-router.get(
-  '/',
-  validate(userValidations.searchUsersSchema),
-  userHandlers.searchUsers
-);
+// Update profile picture
+// If using multipart/form-data, you'll need multer middleware here before the handler.
+// For base64, validationMiddleware can be used if schema expects a string.
+router.post('/me/profile-picture', validationMiddleware({ body: updateProfilePictureSchema }), userHandlers.updateProfilePicture);
 
-// Get user's followers
-router.get(
-  '/:userId/followers',
-  validate(userValidations.userIdSchema),
-  validate(userValidations.paginationSchema), // Apply pagination validation to query
-  userHandlers.getUserFollowers
-);
+// Update privacy settings
+router.put('/me/privacy', validationMiddleware({ body: updatePrivacySettingsSchema }), userHandlers.updatePrivacySettings);
 
-// Get user's following list
-router.get(
-  '/:userId/following',
-  validate(userValidations.userIdSchema),
-  validate(userValidations.paginationSchema), // Apply pagination validation to query
-  userHandlers.getUserFollowing
-);
+// Delete own profile
+router.delete('/me', userHandlers.deleteUser);
 
+// Get suggested users for the logged-in user
+router.get('/suggestions', validationMiddleware({ query: getSuggestedUsersQuerySchema }), userHandlers.getSuggestedUsers);
 
-// --- Protected routes (assuming an `isAuthenticated` middleware) ---
-// Update current user's profile (userId could be implicit from auth token)
-router.put(
-  '/profile', // Or '/:userId/profile' if admin can update
-  // isAuthenticated, 
-  validate(userValidations.updateUserProfileSchema),
-  userHandlers.updateUserProfile
-);
+// Mount follow routes. They are already scoped to /:userId
+router.use('/', followRouter);
 
-// Follow a user
-router.post(
-  '/:userIdToFollowOrUnfollow/follow',
-  // isAuthenticated,
-  validate(userValidations.followUnfollowSchema),
-  userHandlers.followUser
-);
-
-// Unfollow a user
-router.delete(
-  '/:userIdToFollowOrUnfollow/unfollow',
-  // isAuthenticated,
-  validate(userValidations.followUnfollowSchema),
-  userHandlers.unfollowUser
-);
+// Get specific user's profile (public)
+router.get('/:userId', userHandlers.getUserProfile);
 
 export default router;

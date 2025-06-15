@@ -1,25 +1,26 @@
 import { Schema, type Types, model, type Document, type Model } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface Conversation extends Document {
+  _id: Types.ObjectId;
   type: 'one_to_one' | 'group';
-  creation_timestamp: Date;
   last_message_timestamp?: Date;
-  participants: Types.Array<string>;
+  participants: Types.Array<Types.ObjectId>;
+  group_name?: string;
+  group_admin?: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const conversationSchema = new Schema<Conversation, Model<Conversation>>({
-  _id: { type: String, default: () => uuidv4() },
   type: { type: String, enum: ['one_to_one', 'group'], required: true },
-  creation_timestamp: { type: Date, default: Date.now, required: true },
   last_message_timestamp: { type: Date },
-  participants: [{ type: String, ref: 'User' }]
+  participants: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  group_name: { type: String, trim: true },
+  group_admin: { type: Schema.Types.ObjectId, ref: 'User' },
 }, {
   timestamps: true,
-  _id: false
 });
 
-// Index for querying conversations by last essage (e.g., for sorting recent chats)
 conversationSchema.index({ last_message_timestamp: -1 });
 
 export default model<Conversation>('Conversation', conversationSchema);

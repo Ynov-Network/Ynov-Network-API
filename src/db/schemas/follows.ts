@@ -1,18 +1,20 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import { Schema, model, type Document, type Model, Types } from 'mongoose';
 
 export interface Follow extends Document {
-  follower_id: string; 
-  following_id: string; 
+  _id: Types.ObjectId;
+  follower_id: Types.ObjectId;
+  following_id: Types.ObjectId;
+  status: 'pending' | 'accepted';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const followSchema = new Schema<Follow, Model<Follow>>({
-  _id: { type: String, default: () => uuidv4() },
-  follower_id: { type: String, ref: 'User', required: true },
-  following_id: { type: String, ref: 'User', required: true },
+  follower_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  following_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['pending', 'accepted'], default: 'accepted', required: true },
 }, {
-  timestamps: { createdAt: 'created_at', updatedAt: false }, 
-  _id: false,
+  timestamps: true,
   versionKey: false,
 });
 

@@ -1,21 +1,20 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import { Schema, model, type Document, type Model, Types } from 'mongoose';
 
 export interface Hashtag extends Document {
+  _id: Types.ObjectId;
   tag_name: string;
   post_count: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const hashtagSchema = new Schema<Hashtag, Model<Hashtag>>({
-  _id: { type: String, default: () => uuidv4() },
   tag_name: { type: String, required: true, unique: true, trim: true, lowercase: true },
   post_count: { type: Number, default: 0, min: 0, required: true },
 }, {
   timestamps: true,
-  _id: false
 });
 
-hashtagSchema.index({ tag_name: 1 });
 hashtagSchema.index({ post_count: -1 });
 
 export default model<Hashtag>('Hashtag', hashtagSchema);
