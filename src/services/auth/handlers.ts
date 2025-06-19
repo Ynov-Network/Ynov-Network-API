@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
-import type { SignInRequest, SignUpRequest } from "./request-types";
+import type { SignInRequest, SignInSocialRequest, SignUpRequest } from "./request-types";
 import { auth } from "@/lib/auth";
 import { APIError } from "better-auth/api";
 import { fromNodeHeaders } from "better-auth/node";
+import config from "@/config/config";
 
 export const signUp = async (req: SignUpRequest, res: Response) => {
   try {
@@ -48,6 +49,31 @@ export const signIn = async (req: SignInRequest, res: Response) => {
 
     res.setHeaders(response.headers);
     res.status(response.status).json(session.user);
+  } catch (error) {
+    if (error instanceof APIError) {
+      console.error("Sign-in error:", error.body);
+      res.status(error.statusCode).json({ message: error.body?.message || "An error occurred during sign-in." });
+      return;
+    }
+    console.error("Unexpected sign-in error:", error);
+    res.status(500).json({ message: "An internal server error occurred." });
+  }
+}
+
+export const signInSocial = async (req: SignInSocialRequest, res: Response) => {
+  try {
+    const { provider, callbackURL } = req.body;
+    const response = await auth.api.signInSocial({
+      returnHeaders: true,
+      asResponse: true,
+      headers: fromNodeHeaders(req.headers),
+      body: {
+        provider: provider,
+        callbackURL: `${config.server.corsOrigins}/${callbackURL}`,
+      },
+    });
+    const { url } = await response.json();
+    res.redirect(url);
   } catch (error) {
     if (error instanceof APIError) {
       console.error("Sign-in error:", error.body);

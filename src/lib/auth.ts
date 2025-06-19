@@ -28,6 +28,7 @@ export const auth = betterAuth({
       country: { fieldName: "country", type: "string", input: true, required: false, returned: true },
       city: { fieldName: "city", type: "string", input: true, required: false, returned: true },
       bio: { fieldName: "bio", type: "string", input: true, required: false, returned: true },
+      phoneNumber: { fieldName: "phone_number", type: "string", input: true, required: false, returned: true },
       dateJoined: { fieldName: "date_joined", type: "date", input: true, required: false, defaultValue: new Date() },
       lastLogin: { fieldName: "last_login", type: "date", input: true, required: false },
       privacySettings: { fieldName: "privacy_settings", type: "string[]", input: true, required: false },
@@ -36,10 +37,14 @@ export const auth = betterAuth({
       followingCount: { fieldName: "following_count", type: "number", input: true, required: false, defaultValue: 0 },
       postCount: { fieldName: "post_count", type: "number", input: true, required: false, defaultValue: 0 },
       accountPrivacy: { fieldName: "account_privacy", type: "string", defaultValue: "public", required: false, input: true, returned: true },
+      twoFactorEnabled: { fieldName: "two_factor_enabled", type: "boolean", defaultValue: false, input: true, required: false },
     },
     deleteUser: {
       enabled: true
-    }
+    },
+    changeEmail: {
+      enabled: true,
+    },
   },
   account: {
     modelName: "accounts",
@@ -81,7 +86,7 @@ export const auth = betterAuth({
       identifier: "identifier",
       value: "value",
       expiresAt: "expires_at",
-    }
+    },
   },
 
   // Email configuration
@@ -133,20 +138,23 @@ export const auth = betterAuth({
       });
     }
   },
-
   // Social OAuth providers
   socialProviders: {
     microsoft: {
       clientId: config.providers.microsoft.clientId,
       clientSecret: config.providers.microsoft.clientSecret,
       tenantId: config.providers.microsoft.tenantId || "common",
-      redirectURI: `${config.betterAuth.url}/api/auth/callback/microsoft`,
+      redirectURI: `${config.betterAuth.url}/api/better-auth/callback/microsoft`,
       // Restrict to your school's tenant if possible
     },
     github: {
       clientId: config.providers.github.clientId,
       clientSecret: config.providers.github.clientSecret,
-      redirectURI: `${config.betterAuth.url}/api/auth/callback/github`,
+    },
+    google: {
+      prompt: "select_account", 
+      clientId: config.providers.google.clientId,
+      clientSecret: config.providers.google.clientSecret,
     },
   },
 
@@ -191,7 +199,7 @@ export const auth = betterAuth({
       totpOptions: {
         digits: 6,
         period: 30,
-      }
+      },
     }),
 
     // Email OTP for additional verification

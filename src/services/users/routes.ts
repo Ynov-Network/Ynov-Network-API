@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { validationMiddleware } from '@/common/middleware/validation.middleware';
 import * as userHandlers from './handlers';
-import { 
-  updateUserSchema, 
-  updatePrivacySettingsSchema, 
-  updateProfilePictureSchema, 
-  getSuggestedUsersQuerySchema 
+import {
+  updateUserSchema,
+  updatePrivacySettingsSchema,
+  updateProfilePictureSchema,
+  getSuggestedUsersQuerySchema,
+  updateNotificationSettingsSchema
 } from './validations';
 import followRouter from '../follow/routes';
 
@@ -25,6 +26,9 @@ router.post('/me/profile-picture', validationMiddleware({ body: updateProfilePic
 // Update privacy settings
 router.put('/me/privacy', validationMiddleware({ body: updatePrivacySettingsSchema }), userHandlers.updatePrivacySettings);
 
+// Update notification settings
+router.put('/me/notification-settings', validationMiddleware({ body: updateNotificationSettingsSchema }), userHandlers.updateNotificationSettings);
+
 // Delete own profile
 router.delete('/me', userHandlers.deleteUser);
 
@@ -33,6 +37,9 @@ router.get('/suggestions', validationMiddleware({ query: getSuggestedUsersQueryS
 
 // Mount follow routes. They are already scoped to /:userId
 router.use('/', followRouter);
+
+// Get specific user's liked posts
+router.get('/:userId/liked', userHandlers.getLikedPostsByUser);
 
 // Get specific user's profile (public)
 router.get('/:userId', userHandlers.getUserProfile);

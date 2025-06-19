@@ -2,17 +2,22 @@ import type { Response } from 'express';
 import type { SearchRequest } from './request-types';
 import UserModel, { type User } from '@/db/schemas/users';
 import PostModel, { type Post } from '@/db/schemas/posts';
+import HashtagModel from '@/db/schemas/hashtags';
+
+function escapeRegex(text: string) {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
 
 export const performSearch = async (req: SearchRequest, res: Response) => {
   const page = Number.parseInt(req.query.page || '1', 10);
   const limit = Number.parseInt(req.query.limit || '10', 10);
   const skip = (page - 1) * limit;
-  
+
   const q = req.query.q || '';
   const type = req.query.type || 'all';
 
   try {
-    const searchRegex = new RegExp(q, 'i'); // Case-insensitive regex
+    const searchRegex = new RegExp(escapeRegex(q), 'i');
     let users: User[] = [];
     let posts: Post[] = [];
 
@@ -29,18 +34,29 @@ export const performSearch = async (req: SearchRequest, res: Response) => {
         .skip(skip);
     }
 
-    // Search for posts by hashtag if type is 'hashtags' or 'all'
+    // Search for posts by content or hashtag
     if (type === 'hashtags' || type === 'all') {
-      posts = await PostModel.find({ hashtags: q.toLowerCase() })
-        .populate('author_id', 'username profile_picture_url first_name last_name')
-        .sort({ createdAt: -1 })
-        .limit(limit)
-        .skip(skip);
-    }
+      const postOrConditions: any[] = [];
 
-    // Note: Pagination across different collections like this is complex.
-    // For a simple 'all' search, we return separate lists. A more advanced
-    // implementation might involve aggregating results.
+      if (type === 'all') {
+        postOrConditions.push({ content: searchRegex });
+      }
+
+      const hashtagTerm = q.startsWith('#') ? q.substring(1) : q;
+      const hashtag = await HashtagModel.findOne({ tag_name: hashtagTerm.toLowerCase() });
+
+      if (hashtag) {
+        postOrConditions.push({ hashtags: hashtag._id });
+      }
+
+      if (postOrConditions.length > 0) {
+        posts = await PostModel.find({ $or: postOrConditions })
+          .populate('author_id', 'username profile_picture_url first_name last_name')
+          .sort({ createdAt: -1 })
+          .limit(limit)
+          .skip(skip);
+      }
+    }
 
     res.status(200).json({
       message: 'Search results fetched successfully',

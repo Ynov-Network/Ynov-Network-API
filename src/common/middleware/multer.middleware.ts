@@ -1,22 +1,34 @@
 import multer from 'multer';
+import path from 'path';
 
-// Configure multer to store files in memory
-const storage = multer.memoryStorage();
+const memoryStorage = multer.memoryStorage();
 
-// Create the multer instance with configuration
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB limit for files
-  },
-  fileFilter: (req, file, cb) => {
-    // Basic file type validation (images and videos)
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only images and videos are allowed.'));
-    }
-  },
+const fileFilter = (filetypes: RegExp) => (req: any, file: any, cb: any) => {
+  const mimetype = filetypes.test(file.mimetype);
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  }
+  cb(new Error(`Error: File upload only supports the following filetypes - ${filetypes}`));
+};
+
+export const imageUpload = multer({
+  storage: memoryStorage,
+  fileFilter: fileFilter(/jpeg|jpg|png|gif/),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
-export default upload; 
+export const videoUpload = multer({
+  storage: memoryStorage,
+  fileFilter: fileFilter(/mp4|mov|avi/),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+});
+
+const mediaUpload = multer({
+  storage: memoryStorage,
+  fileFilter: fileFilter(/jpeg|jpg|png|gif|mp4|mov|avi/),
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
+
+export default mediaUpload; 

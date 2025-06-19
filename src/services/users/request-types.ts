@@ -1,10 +1,11 @@
 import type { Request } from "express";
-import type { 
-  DeleteUserRequestBody, 
-  UpdatePrivacySettingsRequestBody, 
-  UpdateProfilePictureRequestBody, 
-  UpdateUserRequestBody, 
-  UserIdParams 
+import type {
+  DeleteUserRequestBody,
+  UpdatePrivacySettingsRequestBody,
+  UpdateProfilePictureRequestBody,
+  UpdateUserRequestBody,
+  UserIdParams,
+  UpdateNotificationSettingsRequestBody
 } from "./validations";
 
 export interface GetUserProfileRequest extends Request {
@@ -21,6 +22,10 @@ export interface UpdateProfilePictureRequest extends Request {
 
 export interface UpdatePrivacySettingsRequest extends Request {
   body: UpdatePrivacySettingsRequestBody;
+}
+
+export interface UpdateNotificationSettingsRequest extends Request {
+  body: UpdateNotificationSettingsRequestBody;
 }
 
 export interface DeleteUserRequest extends Request {

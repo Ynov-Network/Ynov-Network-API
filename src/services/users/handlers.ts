@@ -5,11 +5,11 @@ import type {
   UpdateProfilePictureRequest,
   UpdatePrivacySettingsRequest,
   DeleteUserRequest,
-  GetSuggestedUsersRequest
+  GetSuggestedUsersRequest,
+  UpdateNotificationSettingsRequest
 } from './request-types';
 import User from '@/db/schemas/users';
 import cloudinary from '@/lib/cloudinary';
-import { auth } from '@/lib/auth';
 import Follow from '@/db/schemas/follows';
 import FollowModel from '@/db/schemas/follows';
 import UserModel from '@/db/schemas/users';
@@ -24,15 +24,12 @@ const publicUserFields = 'first_name last_name username profile_picture_url bio 
 
 export const getUserProfile = async (req: GetUserProfileRequest, res: Response) => {
   try {
-    const userIdToFetch = req.params.userId || req.auth?.user?.id;
-    if (!userIdToFetch) {
-      res.status(400).json({ error: 'User ID not provided and not logged in.' });
-      return;
-    }
+    const { userId: username } = req.params;
 
-    const user = await User.findById(userIdToFetch).select(publicUserFields).lean();
+    const user = await UserModel.findOne({ username }).lean();
+
     if (!user) {
-      res.status(404).json({ error: 'User not found.' });
+      res.status(404).json({ message: "User not found" });
       return;
     }
     const requesterId = req.auth?.user?.id;
@@ -190,16 +187,16 @@ export const updatePrivacySettings = async (req: UpdatePrivacySettingsRequest, r
   }
   try {
     const { id: userId } = req.auth.user;
-    const { account_privacy } = req.body;
+    const privacySettings = req.body;
 
-    if (!account_privacy) {
+    if (Object.keys(privacySettings).length === 0) {
       res.status(400).json({ message: "No privacy settings provided." });
       return;
     }
 
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
-      { account_privacy: account_privacy },
+      { $set: privacySettings },
       { new: true }
     ).select(publicUserFields).lean();
 
@@ -215,9 +212,41 @@ export const updatePrivacySettings = async (req: UpdatePrivacySettingsRequest, r
   }
 };
 
+export const updateNotificationSettings = async (req: UpdateNotificationSettingsRequest, res: Response) => {
+  if (!req.auth?.user) {
+    res.status(401).json({ message: 'Unauthorized.' });
+    return;
+  }
+  try {
+    const { id: userId } = req.auth.user;
+    const notificationSettings = req.body;
+
+    if (Object.keys(notificationSettings).length === 0) {
+      res.status(400).json({ message: "No notification settings provided." });
+      return;
+    }
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { notification_settings: notificationSettings } },
+      { new: true }
+    ).select(publicUserFields).lean();
+
+    if (!updatedUser) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Notification settings updated successfully.', user: updatedUser });
+  } catch (error) {
+    console.error('Error in updateNotificationSettings:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
 export const deleteUser = async (req: DeleteUserRequest, res: Response) => {
   if (!req.auth?.user) {
-  res.status(401).json({ message: 'Unauthorized.' });
+    res.status(401).json({ message: 'Unauthorized.' });
     return;
   }
   try {
@@ -252,5 +281,26 @@ export const deleteUser = async (req: DeleteUserRequest, res: Response) => {
   } catch (error) {
     console.error('Error in deleteUser:', error);
     res.status(500).json({ message: 'Internal server error.' });
+  }
+}
+
+export const getLikedPostsByUser = async (req: GetUserProfileRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const likedPosts = await LikeModel.find({ user_id: userId }).select('post_id').populate({
+      path: 'post_id',
+      model: 'Post',
+      populate: {
+        path: 'author_id',
+        model: 'User',
+        select: 'first_name last_name username profile_picture_url'
+      }
+    }).lean();
+
+    const posts = likedPosts.map(like => like.post_id).filter(Boolean);
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error fetching liked posts:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 }

@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, type Types } from 'mongoose';
 
 export interface User extends Document {
   _id: Types.ObjectId;
@@ -8,6 +8,7 @@ export interface User extends Document {
   username: string;
   profile_picture_url?: string;
   bio?: string;
+  phone_number?: string;
   date_joined: Date;
   last_login?: Date;
   privacy_settings?: unknown;
@@ -23,6 +24,15 @@ export interface User extends Document {
   ban_reason?: string;
   ban_expires?: Date;
   account_privacy: 'public' | 'private' | 'followers_only';
+  show_online_status: boolean;
+  allow_message_requests: 'everyone' | 'following' | 'none';
+  notification_settings: {
+    likes: boolean;
+    comments: boolean;
+    follows: boolean;
+    messages: boolean;
+    posts: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +46,7 @@ const userSchema = new Schema<User, Model<User>>({
   city: { type: String, trim: true, maxlength: 50 },
   profile_picture_url: { type: String },
   bio: { type: String, maxlength: 160 },
+  phone_number: { type: String, trim: true, maxlength: 15 },
   date_joined: { type: Date, default: Date.now },
   last_login: { type: Date },
   privacy_settings: { type: Schema.Types.Mixed },
@@ -49,6 +60,15 @@ const userSchema = new Schema<User, Model<User>>({
   ban_reason: { type: String },
   ban_expires: { type: Date },
   account_privacy: { type: String, enum: ['public', 'private', 'followers_only'], default: 'public' },
+  show_online_status: { type: Boolean, default: true },
+  allow_message_requests: { type: String, enum: ['everyone', 'following', 'none'], default: 'everyone' },
+  notification_settings: {
+    likes: { type: Boolean, default: true },
+    comments: { type: Boolean, default: true },
+    follows: { type: Boolean, default: true },
+    messages: { type: Boolean, default: true },
+    posts: { type: Boolean, default: false },
+  },
 }, {
   timestamps: true,
 });
