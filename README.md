@@ -66,11 +66,10 @@ Ynov Network API is the backend service powering a university social network pla
 - **Runtime**: Node.js 20+
 - **Framework**: Express.js
 - **Language**: TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
+- **Database**: MongoDB
 - **Authentication**: Better Auth
 
 ### Services & Integrations
-- **File Storage**: Cloudinary
 - **Email**: Nodemailer
 - **Real-time**: Socket.io
 - **Validation**: Zod
@@ -106,17 +105,11 @@ Ynov Network API is the backend service powering a university social network pla
 
 3. **Set up environment variables**
    ```bash
-   cp .env.example .env
+   cp .env.sample .env
    # Edit .env with your configuration
    ```
 
-4. **Set up the database**
-   ```bash
-   npm run db:migrate
-   npm run db:seed
-   ```
-
-5. **Start development server**
+4. **Start development server**
    ```bash
    npm run dev
    ```
