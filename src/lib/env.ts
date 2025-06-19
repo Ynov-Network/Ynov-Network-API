@@ -20,6 +20,8 @@ const EnvSchema = z.object({
     MICROSOFT_CLIENT_ID: z.string().default(""),
     MICROSOFT_CLIENT_SECRET: z.string().default(""),
     MICROSOFT_TENANT_ID: z.string().default(""),
+    GOOGLE_CLIENT_ID: z.string().default(""),
+    GOOGLE_CLIENT_SECRET: z.string().default(""),
     GITHUB_CLIENT_ID: z.string().default(""),
     GITHUB_CLIENT_SECRET: z.string().default(""),
 });

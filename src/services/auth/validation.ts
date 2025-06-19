@@ -5,6 +5,11 @@ export const signInSchema = z.strictObject({
   password: z.string().min(8, "At least 8 characters").max(64, "Password cannot exceed 64 characters"),
 });
 
+export const signInSocialSchema = z.strictObject({
+  provider: z.enum(["microsoft", "github", "google"]),
+  callbackURL: z.string().startsWith("/"),
+});
+
 export const signUpSchema = z.strictObject({
   first_name: z.string().min(3, "Must be at least 3 characters").max(50),
   last_name: z.string().min(3, "Must be at least 3 characters").max(50),
@@ -22,3 +27,4 @@ export const signUpSchema = z.strictObject({
 
 export type SignInRequestBody = z.infer<typeof signInSchema>;
 export type SignUpRequestBody = z.infer<typeof signUpSchema>;
+export type SignInSocialRequestBody = z.infer<typeof signInSocialSchema>;
